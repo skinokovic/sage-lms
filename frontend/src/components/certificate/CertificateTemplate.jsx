@@ -1,9 +1,9 @@
 import { forwardRef } from "react";
-import crest from "../../public/assets/Group 15.png";
+// import crest from "../../public/assets/Group 15.png";
 
 export const CERT_WIDTH = 1080;
 export const CERT_HEIGHT = 734;
-
+const crest = "/assets/crest.png";
 const NAVY = "#1E3A8A";
 const RED = "#B00000";
 const SERIF = '"Playfair Display", "Times New Roman", Georgia, serif';
