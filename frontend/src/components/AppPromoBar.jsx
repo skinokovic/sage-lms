@@ -10,12 +10,12 @@ export default function AppPromoBar() {
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:flex-nowrap sm:justify-between sm:px-6">
         <div className="flex flex-1 items-center justify-center gap-2 text-center">
           <p className="text-xs font-bold text-white sm:text-sm">
-            Join others using Sage App for more effective use !
+            Join others using Sage App
           </p>
-          <Smartphone
+          {/* <Smartphone
             size={16}
             className="hidden shrink-0 text-blue-900 sm:block"
-          />
+          /> */}
         </div>
 
         <a
