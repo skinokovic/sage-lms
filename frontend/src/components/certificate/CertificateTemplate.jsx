@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import crest from "../../../assets/Group 15.png";
+import crest from "../../public/assets/Group 15.png";
 
 export const CERT_WIDTH = 1080;
 export const CERT_HEIGHT = 734;
