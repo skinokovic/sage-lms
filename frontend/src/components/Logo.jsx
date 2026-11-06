@@ -1,4 +1,4 @@
-import logoDefault from "../../assets/Group 15.png";
+import logoDefault from "../../public/assets/Group 15.png";
 // import logoLight from "../../assets/sage-crest-light.png";
 
 /**
