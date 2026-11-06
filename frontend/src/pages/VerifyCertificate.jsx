@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { CheckCircle2, Loader2, Search, XCircle } from "lucide-react";
-import crest from "../../assets/Group 15.png";
+import crest from "../../public/assets/Group 15.png";
 import { certificatesApi } from "../api/certificatesApi";
 
 const VerifyCertificate = () => {
