@@ -96,6 +96,7 @@ import DataDeletion from "./pages/DataDeletion";
 import PaymentResult from "./pages/PaymentResult";
 import BankTransfers from "./pages/admin/BankTransfer";
 import Wishlist from "./pages/WishList";
+import GuestRoute from "./routes/GuestRoutes";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -110,10 +111,10 @@ const App = () => {
         {/* PUBLIC ROUTES */}
         <Route path="/" element={<Homepage />} />
 
-        <Route path="/login" element={<Login />} />
+        {/* <Route path="/login" element={<Login />} />
 
         <Route path="/create-account" element={<CreateAccount />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} /> */}
         <Route path="/courses/:courseId" element={<CourseDetails />} />
         <Route path="/courses" element={<Courses />} />
         <Route path="/about" element={<About />} />
@@ -124,7 +125,6 @@ const App = () => {
         <Route path="/faq" element={<FAQ />} />
         <Route path="/cart" element={<Cart />} />
 
-        <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -142,6 +142,8 @@ const App = () => {
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/become-instructor" element={<BecomeInstructor />} />
+          <Route path="/change-password" element={<ChangePassword />} />
+
           {/* ================= ADMIN ================= */}
           <Route element={<RoleProtectedRoute allowedRoles={["admin"]} />}>
             <Route path="/dashboard/admin" element={<AdminLayout />}>
@@ -350,6 +352,12 @@ const App = () => {
               <Route path="reviews" element={<StudentMyReviews />} />
             </Route>
           </Route>
+        </Route>
+
+        <Route element={<GuestRoute />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/create-account" element={<CreateAccount />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
         </Route>
 
         {/* FALLBACK */}

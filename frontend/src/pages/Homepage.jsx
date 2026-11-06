@@ -506,7 +506,7 @@ export default function Homepage() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-bold text-gray-900">10,000+</p>
+                  <p className="text-sm font-bold text-gray-900">100+</p>
 
                   <p className="text-[10px] text-gray-500">
                     Learning community
@@ -525,7 +525,7 @@ export default function Homepage() {
         <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-gray-100 px-5 sm:grid-cols-4 sm:px-6 lg:px-8">
           <div className="px-3 py-6 text-center sm:py-7">
             <p className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
-              10K+
+              1K+
             </p>
 
             <p className="mt-1 text-xs text-gray-500 sm:text-sm">Learners</p>
@@ -541,7 +541,7 @@ export default function Homepage() {
 
           <div className="border-t border-gray-100 px-3 py-6 text-center sm:border-t-0 sm:py-7">
             <p className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
-              50+
+              20+
             </p>
 
             <p className="mt-1 text-xs text-gray-500 sm:text-sm">

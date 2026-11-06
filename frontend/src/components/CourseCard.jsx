@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Heart, Loader2, Star } from "lucide-react";
+import { BookOpen, CheckCircle2, Heart, Loader2, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -30,6 +30,12 @@ const isInList = (key, id) =>
  * toggle, rating/reviews, price (with optional struck-through original
  * price) and one action button. Rendered inside CourseSlider for the
  * Popular / Featured / Trending rows on the homepage.
+ *
+ * Every card has the SAME width and height regardless of its content:
+ *   - the title always reserves two lines (clamped if longer)
+ *   - the instructor name and the chips row are always a single line
+ *     (clipped if too long)
+ *   - the footer is a fixed-height row that never wraps
  *
  * The price area and button follow what the student has:
  *   - owns the course   -> "Enrolled" + "Continue learning"
@@ -78,6 +84,7 @@ export default function CourseCard({
   const enrolled = isEnrolled(id);
   const isFree = Number(price || 0) === 0;
   const enrolling = enrollingId === String(id);
+  const reviewCount = Number(reviews) || 0;
 
   const toggleWishlist = () => {
     const list = readList(WISHLIST_KEY);
@@ -126,20 +133,27 @@ export default function CourseCard({
     toast.success("Course added to cart.");
   };
 
+  // Same height, never wraps, never shrinks
   const actionBase =
-    "shrink-0 cursor-pointer rounded-control px-3 py-1.5 text-xs font-semibold transition-colors";
+    "inline-flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-control px-3 text-xs font-semibold transition-colors";
 
   return (
-    <div className="flex w-[min(72vw,260px)] shrink-0 flex-col overflow-hidden rounded-xl border border-line bg-surface transition-shadow hover:shadow-md sm:w-70">
-      {/* Thumbnail */}
+    <div className="flex w-[min(78vw,272px)] shrink-0 flex-col overflow-hidden rounded-xl border border-line bg-surface transition-shadow hover:shadow-md sm:w-72">
+      {/* Thumbnail (fixed 16:9, so every card's image is the same height) */}
       <div className="relative aspect-video w-full overflow-hidden bg-surface-muted">
         <Link to={`/courses/${id}`} className="absolute inset-0 block">
-          <img
-            src={image}
-            alt={title}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
+          {image ? (
+            <img
+              src={image}
+              alt={title}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-body/40">
+              <BookOpen size={32} />
+            </div>
+          )}
         </Link>
 
         {badge && (
@@ -168,51 +182,57 @@ export default function CourseCard({
 
       {/* Content */}
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <Link to={`/courses/${id}`}>
-          <h3 className="line-clamp-2 font-semibold leading-snug text-heading">
+        {/* Title: always two lines tall (h-11), clamped if longer */}
+        <Link to={`/courses/${id}`} className="block">
+          <h3 className="line-clamp-2 h-11 overflow-hidden font-semibold leading-snug text-heading">
             {title}
           </h3>
         </Link>
-        <p className="text-sm text-body">{instructor}</p>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="rounded border border-line px-2 py-0.5 text-[11px] text-body">
+        {/* Instructor: always one line */}
+        <p className="h-5 truncate text-sm leading-5 text-body">{instructor}</p>
+
+        {/* Chips: always one line; the category shrinks first */}
+        <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+          <span className="min-w-0 truncate rounded border border-line px-2 py-0.5 text-[11px] text-body">
             {category || "Course"}
           </span>
           {bestseller && (
-            <span className="rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+            <span className="shrink-0 whitespace-nowrap rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
               Bestseller
             </span>
           )}
           {Number(rating) > 0 && (
-            <span className="flex items-center gap-1 rounded border border-line px-2 py-0.5 text-[11px] font-semibold text-heading">
+            <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded border border-line px-2 py-0.5 text-[11px] font-semibold text-heading">
               <Star size={12} className="fill-amber-400 text-amber-400" />
               {Number(rating).toFixed(1)}
             </span>
           )}
-          {Number(reviews) > 0 && (
-            <span className="rounded border border-line px-2 py-0.5 text-[11px] text-body">
-              {Number(reviews).toLocaleString()} ratings
+          {reviewCount > 0 && (
+            <span className="shrink-0 whitespace-nowrap rounded border border-line px-2 py-0.5 text-[11px] text-body">
+              {reviewCount.toLocaleString()}{" "}
+              {reviewCount === 1 ? "rating" : "ratings"}
             </span>
           )}
         </div>
 
-        <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+        {/* Footer: fixed-height row, price/status on the left, button on the right */}
+        <div className="mt-auto flex h-10 items-center justify-between gap-2 pt-2">
           {/* Price area */}
           {enrolled ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
-              <CheckCircle2 size={13} />
-              Enrolled
+            <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">
+              <CheckCircle2 size={12} className="shrink-0" />
+              <span className="truncate">Enrolled</span>
             </span>
           ) : isFree ? (
             <span className="font-bold text-emerald-600">Free</span>
           ) : (
-            <div className="flex items-baseline gap-2">
-              <span className="font-bold text-heading">
+            <div className="flex min-w-0 items-baseline gap-2 overflow-hidden">
+              <span className="shrink-0 whitespace-nowrap font-bold text-heading">
                 ₦{Number(price).toLocaleString()}
               </span>
               {originalPrice > price && (
-                <span className="text-xs text-body line-through">
+                <span className="truncate text-xs text-body line-through">
                   ₦{Number(originalPrice).toLocaleString()}
                 </span>
               )}
@@ -232,7 +252,7 @@ export default function CourseCard({
               type="button"
               onClick={() => enrollFree({ id, title })}
               disabled={enrolling}
-              className={`${actionBase} inline-flex items-center gap-1.5 bg-primary text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70`}
+              className={`${actionBase} bg-primary text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70`}
             >
               {enrolling && <Loader2 size={12} className="animate-spin" />}
               {enrolling ? "Enrolling…" : "Enroll for free"}

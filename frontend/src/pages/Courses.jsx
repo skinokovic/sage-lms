@@ -64,12 +64,18 @@ const formatMoney = (amount) =>
 
 // The price area of a course: "Enrolled" for a course the student owns,
 // "Free" for a zero-price course, otherwise the price.
-function CoursePrice({ price, enrolled, className = "" }) {
+// `compact` makes the "Enrolled" pill smaller so it fits beside a button
+// inside a course card without wrapping.
+function CoursePrice({ price, enrolled, className = "", compact = false }) {
   if (enrolled) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-bold text-emerald-700">
-        <CheckCircle2 size={15} />
-        Enrolled
+      <span
+        className={`inline-flex min-w-0 items-center rounded-full bg-emerald-50 font-bold text-emerald-700 ${
+          compact ? "gap-1 px-2.5 py-1 text-xs" : "gap-1.5 px-3 py-1.5 text-sm"
+        }`}
+      >
+        <CheckCircle2 size={compact ? 13 : 15} className="shrink-0" />
+        <span className="truncate">Enrolled</span>
       </span>
     );
   }
@@ -109,25 +115,47 @@ function CourseImage({ src, title, className = "" }) {
   );
 }
 
-function CourseRating({ rating }) {
+function CourseRating({ rating, count = 0 }) {
   const value = Number(rating || 0);
+  const reviewCount = Number(count || 0);
 
   if (!value) {
-    return <span className="text-xs text-gray-500">Not rated yet</span>;
+    return (
+      <span className="whitespace-nowrap text-xs text-gray-500">
+        Not rated yet
+      </span>
+    );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 text-sm font-semibold text-heading">
+    <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-semibold text-heading">
       <Star size={14} fill="currentColor" className="text-amber-500" />
       {value.toFixed(1)}
+      {reviewCount > 0 && (
+        <span className="text-xs font-normal text-body">
+          ({reviewCount.toLocaleString()})
+        </span>
+      )}
     </span>
   );
 }
 
+// One shared size for the card's action button: same height everywhere,
+// never wraps, never shrinks.
+const CARD_ACTION =
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-primary px-3 text-xs font-bold text-white transition-colors hover:bg-primary/90";
+
+/**
+ * Grid card. Every card is the same size regardless of its content:
+ *   - category/level row, instructor and rating rows are one line each
+ *     (clipped with an ellipsis if too long)
+ *   - the title always reserves two lines
+ *   - the footer is a fixed-height row that never wraps
+ */
 function CourseCard({ course, enrolled = false, fullWidth = false }) {
   return (
     <article
-      className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl ${
+      className={`group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl ${
         fullWidth ? "w-full" : ""
       }`}
     >
@@ -143,61 +171,65 @@ function CourseCard({ course, enrolled = false, fullWidth = false }) {
       </Link>
 
       <div className="flex flex-1 flex-col p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-primary/5 px-2.5 py-1 text-xs font-semibold text-primary">
+        {/* Category + level: one line */}
+        <div className="flex h-7 items-center gap-2 overflow-hidden">
+          <span className="min-w-0 truncate rounded-full bg-primary/5 px-2.5 py-1 text-xs font-semibold text-primary">
             {course.category || "General"}
           </span>
 
           {course.level && (
-            <span className="text-xs text-body">{course.level}</span>
-          )}
-        </div>
-
-        <Link to={`/courses/${course.id}`}>
-          <h3 className="mt-3 line-clamp-2 min-h-12 text-base font-bold leading-6 text-heading transition-colors group-hover:text-primary">
-            {course.title}
-          </h3>
-        </Link>
-
-        <p className="mt-2 truncate text-sm text-body">
-          By {course.instructorName}
-        </p>
-
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <CourseRating rating={course.rating} />
-
-          {course.duration && (
-            <span className="inline-flex items-center gap-1 text-xs text-body">
-              <Clock3 size={13} />
-              {course.duration}
+            <span className="shrink-0 whitespace-nowrap text-xs text-body">
+              {course.level}
             </span>
           )}
         </div>
 
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-4 mt-4">
-          <CoursePrice
-            price={course.price}
-            enrolled={enrolled}
-            className="text-lg font-extrabold text-heading"
-          />
+        {/* Title: always two lines tall */}
+        <Link to={`/courses/${course.id}`}>
+          <h3 className="mt-2 line-clamp-2 h-12 overflow-hidden text-base font-bold leading-6 text-heading transition-colors group-hover:text-primary">
+            {course.title}
+          </h3>
+        </Link>
 
-          {enrolled ? (
-            <Link
-              to={courseLearnPath(course.id)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-primary/90 sm:text-sm"
-            >
-              Continue learning
-              <ArrowRight size={15} />
-            </Link>
-          ) : (
-            <Link
-              to={`/courses/${course.id}`}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-primary/90 sm:text-sm"
-            >
-              View course
-              <ArrowRight size={15} />
-            </Link>
+        {/* Instructor: one line */}
+        <p className="mt-2 h-5 truncate text-sm leading-5 text-body">
+          By {course.instructorName}
+        </p>
+
+        {/* Rating + duration: one line */}
+        <div className="mt-3 flex h-5 items-center gap-3 overflow-hidden">
+          <CourseRating rating={course.rating} count={course.reviewCount} />
+
+          {course.duration && (
+            <span className="inline-flex min-w-0 items-center gap-1 text-xs text-body">
+              <Clock3 size={13} className="shrink-0" />
+              <span className="truncate">{course.duration}</span>
+            </span>
           )}
+        </div>
+
+        {/* Footer: price/status on the left, button on the right */}
+        <div className="mt-auto">
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
+            <CoursePrice
+              price={course.price}
+              enrolled={enrolled}
+              compact
+              className="min-w-0 truncate text-lg font-extrabold text-heading"
+            />
+
+            {enrolled ? (
+              <Link to={courseLearnPath(course.id)} className={CARD_ACTION}>
+                Continue learning
+                <ArrowRight size={14} />
+              </Link>
+            ) : (
+              <Link to={`/courses/${course.id}`} className={CARD_ACTION}>
+                View course
+                <ArrowRight size={14} />
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </article>
@@ -245,7 +277,7 @@ function CourseListRow({ course, enrolled = false }) {
 
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
           <div className="flex flex-wrap items-center gap-3">
-            <CourseRating rating={course.rating} />
+            <CourseRating rating={course.rating} count={course.reviewCount} />
 
             {course.duration && (
               <span className="inline-flex items-center gap-1 text-xs text-body">
@@ -265,7 +297,7 @@ function CourseListRow({ course, enrolled = false }) {
             {enrolled ? (
               <Link
                 to={courseLearnPath(course.id)}
-                className="inline-flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary/90"
+                className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary/90"
               >
                 Continue learning
                 <ArrowRight size={15} />
@@ -273,7 +305,7 @@ function CourseListRow({ course, enrolled = false }) {
             ) : (
               <Link
                 to={`/courses/${course.id}`}
-                className="inline-flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary/90"
+                className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary/90"
               >
                 View
                 <ArrowRight size={15} />
@@ -718,7 +750,7 @@ export default function Courses() {
                         ? courseLearnPath(featuredCourse.id)
                         : `/courses/${featuredCourse.id}`
                     }
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white hover:bg-primary/90"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white hover:bg-primary/90"
                   >
                     {featuredEnrolled
                       ? "Continue learning"
@@ -733,7 +765,7 @@ export default function Courses() {
                         .getElementById("course-results")
                         ?.scrollIntoView({ behavior: "smooth" })
                     }
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
                   >
                     Browse all courses
                     <BookOpen size={16} />
@@ -951,7 +983,7 @@ export default function Courses() {
               )}
             </div>
           ) : view === "grid" ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {visibleCourses.map((course) => (
                 <CourseCard
                   key={course.id}
