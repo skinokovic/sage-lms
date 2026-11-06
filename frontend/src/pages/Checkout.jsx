@@ -902,7 +902,7 @@ export default function Checkout() {
                     <span>
                       {isBankTransfer
                         ? "Bank transfer · confirmed by our team"
-                        : "Paystack secure checkout · Test Mode"}
+                        : "Paystack secure checkout"}
                     </span>
                   </div>
                   <div className="flex gap-2">
