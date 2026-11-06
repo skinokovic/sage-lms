@@ -45,7 +45,7 @@ const app = express();
 // --- Global middleware ---
 app.use(helmet());
 // app.use(cors());
-const allowedOrigins = [process.env.CLIENT_URL, "http://localhost:5173"]
+const allowedOrigins = [process.env.VITE_CLIENT_URL, "http://localhost:5173"]
   .filter(Boolean)
   .map((origin) => origin.replace(/\/$/, ""));
 

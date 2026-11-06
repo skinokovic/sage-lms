@@ -198,7 +198,7 @@ export async function initializePayment(req, res, next) {
 
     try {
       const clientUrl = String(
-        process.env.CLIENT_URL || "http://localhost:5173",
+        process.env.VITE_CLIENT_URL || "http://localhost:5173",
       ).replace(/\/$/, "");
       const transaction = await initializePaystackTransaction({
         email: customer.customerEmail,
