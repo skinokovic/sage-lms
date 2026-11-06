@@ -1,0 +1,352 @@
+{
+  "info": {
+    "name": "LMS Backend API",
+    "description": "Full API collection for the LMS backend. Run Signup/Login first to auto-populate tokens.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "courseId", "value": "" },
+    { "key": "moduleId", "value": "" },
+    { "key": "lessonId", "value": "" },
+    { "key": "enrollmentId", "value": "" },
+    { "key": "paymentId", "value": "" },
+    { "key": "resetToken", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup",
+          "event": [{"listen":"test","script":{"exec":[
+            "if (pm.response.code === 201) {",
+            "  const data = pm.response.json();",
+            "  pm.collectionVariables.set('accessToken', data.accessToken);",
+            "  pm.collectionVariables.set('refreshToken', data.refreshToken);",
+            "  pm.collectionVariables.set('userId', data.user.id);",
+            "}"
+          ],"type":"text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/signup",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Student\",\n  \"email\": \"jane@example.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{"listen":"test","script":{"exec":[
+            "if (pm.response.code === 200) {",
+            "  const data = pm.response.json();",
+            "  pm.collectionVariables.set('accessToken', data.accessToken);",
+            "  pm.collectionVariables.set('refreshToken', data.refreshToken);",
+            "  pm.collectionVariables.set('userId', data.user.id);",
+            "}"
+          ],"type":"text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane@example.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [{"listen":"test","script":{"exec":[
+            "if (pm.response.code === 200) {",
+            "  pm.collectionVariables.set('accessToken', pm.response.json().accessToken);",
+            "}"
+          ],"type":"text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "event": [{"listen":"test","script":{"exec":[
+            "if (pm.response.code === 200) {",
+            "  const data = pm.response.json();",
+            "  if (data.devToken) pm.collectionVariables.set('resetToken', data.devToken);",
+            "}"
+          ],"type":"text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"jane@example.com\"\n}" }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/reset-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"password\": \"NewPassword123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" }
+        }
+      ]
+    },
+    {
+      "name": "Courses",
+      "item": [
+        {
+          "name": "Create Course (admin)",
+          "event": [{"listen":"test","script":{"exec":[
+            "if (pm.response.code === 201) {",
+            "  pm.collectionVariables.set('courseId', pm.response.json().course._id);",
+            "}"
+          ],"type":"text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/courses",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Intro to Node.js\",\n  \"slug\": \"intro-to-nodejs\",\n  \"description\": \"Learn backend development with Node.js\",\n  \"category\": \"Web Development\",\n  \"level\": \"beginner\",\n  \"price\": 49.99,\n  \"published\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "List Courses",
+          "request": { "method": "GET", "url": "{{baseUrl}}/courses?page=1&limit=20" }
+        },
+        {
+          "name": "Get Course By Id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/courses/{{courseId}}" }
+        },
+        {
+          "name": "Update Course (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/courses/{{courseId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"price\": 39.99\n}" }
+          }
+        },
+        {
+          "name": "Delete Course (admin)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/courses/{{courseId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Modules",
+      "item": [
+        {
+          "name": "Create Module (admin)",
+          "event": [{"listen":"test","script":{"exec":[
+            "if (pm.response.code === 201) {",
+            "  pm.collectionVariables.set('moduleId', pm.response.json().module._id);",
+            "}"
+          ],"type":"text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/courses/{{courseId}}/modules",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Module 1: Getting Started\",\n  \"description\": \"Environment setup and basics\",\n  \"order\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "List Modules for Course",
+          "request": { "method": "GET", "url": "{{baseUrl}}/courses/{{courseId}}/modules" }
+        },
+        {
+          "name": "Update Module (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/modules/{{moduleId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Module 1: Getting Started (Updated)\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Module (admin)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/modules/{{moduleId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Lessons",
+      "item": [
+        {
+          "name": "Create Lesson (admin)",
+          "event": [{"listen":"test","script":{"exec":[
+            "if (pm.response.code === 201) {",
+            "  pm.collectionVariables.set('lessonId', pm.response.json().lesson._id);",
+            "}"
+          ],"type":"text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/modules/{{moduleId}}/lessons",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Setting up Node & npm\",\n  \"videoUrl\": \"https://example.com/videos/lesson1.mp4\",\n  \"duration\": 480,\n  \"order\": 1,\n  \"isPreview\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "List Lessons for Module",
+          "request": { "method": "GET", "url": "{{baseUrl}}/modules/{{moduleId}}/lessons" }
+        },
+        {
+          "name": "Get Lesson By Id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/lessons/{{lessonId}}" }
+        },
+        {
+          "name": "Update Lesson (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/lessons/{{lessonId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"duration\": 600\n}" }
+          }
+        },
+        {
+          "name": "Delete Lesson (admin)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/lessons/{{lessonId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Enrollments",
+      "item": [
+        {
+          "name": "Enroll in Course",
+          "event": [{"listen":"test","script":{"exec":[
+            "if (pm.response.code === 201) {",
+            "  pm.collectionVariables.set('enrollmentId', pm.response.json().enrollment._id);",
+            "}"
+          ],"type":"text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/enrollments",
+            "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\"\n}" }
+          }
+        },
+        {
+          "name": "Get My Enrollments",
+          "request": { "method": "GET", "url": "{{baseUrl}}/enrollments/me" }
+        },
+        {
+          "name": "Get Course Enrollments (admin)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/enrollments/course/{{courseId}}" }
+        },
+        {
+          "name": "Update Enrollment Status",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/enrollments/{{enrollmentId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"dropped\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Progress",
+      "item": [
+        {
+          "name": "Mark Lesson Complete",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/progress",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": \"{{courseId}}\",\n  \"lessonId\": \"{{lessonId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Course Progress",
+          "request": { "method": "GET", "url": "{{baseUrl}}/progress/{{courseId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "event": [{"listen":"test","script":{"exec":[
+            "if (pm.response.code === 201) {",
+            "  pm.collectionVariables.set('paymentId', pm.response.json().payment._id);",
+            "}"
+          ],"type":"text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/payments",
+            "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\",\n  \"provider\": \"manual\"\n}" }
+          }
+        },
+        {
+          "name": "Confirm Payment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/payments/{{paymentId}}/confirm",
+            "body": { "mode": "raw", "raw": "{\n  \"providerRef\": \"test_ref_123\"\n}" }
+          }
+        },
+        {
+          "name": "Get My Payments",
+          "request": { "method": "GET", "url": "{{baseUrl}}/payments/me" }
+        }
+      ]
+    },
+    {
+      "name": "Certificates",
+      "item": [
+        {
+          "name": "Get My Certificates",
+          "request": { "method": "GET", "url": "{{baseUrl}}/certificates/me" }
+        },
+        {
+          "name": "Verify Certificate by Code",
+          "request": { "method": "GET", "url": "{{baseUrl}}/certificates/verify/REPLACE_WITH_CODE" }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        { "name": "Health", "request": { "method": "GET", "url": "{{baseUrl}}/health" } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+/*
+  SAGE design tokens, defined as Tailwind v4 theme variables.
+  Because v4 generates real CSS custom properties from @theme, every
+  value below is both a Tailwind utility (bg-primary, text-body, ...)
+  AND a plain var(--color-primary) usable in inline SVG/styles.
+*/
+@theme {
+  /* Primary — Red */
+  --color-primary: #b00000;
+  --color-primary-hover: #6f0000;
+  --color-primary-pressed: #700000;
+
+  /* Secondary — Blue */
+  --color-secondary: #1e3a8a;
+  --color-secondary-hover: #1a3378;
+  --color-secondary-pressed: #162b66;
+
+  /* Icons */
+  --color-icon: #1f3a5f;
+
+  /* Neutrals */
+  --color-surface: #ffffff;
+  --color-surface-muted: #f5f5f5;
+  --color-line: #d9d9d9;
+  --color-heading: #1f2937;
+  --color-body: #6b7280;
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Radii */
+  --radius-control: 10px;
+  --radius-card: 20px;
+}
+
+@layer base {
+  body {
+    @apply font-sans text-heading bg-surface-muted antialiased m-0;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-secondary);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
