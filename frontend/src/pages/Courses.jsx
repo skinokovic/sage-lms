@@ -27,8 +27,11 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import BecomeInstructorCTA from "../components/BecomeInstructorCTA";
 
+import { m } from "framer-motion";
+
 import { fetchPublishedCourses } from "../store/courseSlice";
 import useEnrolledCourses, { courseLearnPath } from "../hooks/userEnrollment";
+import { EASE, Reveal, Stagger, fadeUp } from "../components/motion";
 
 const PAGE_SIZE = 8;
 
@@ -318,6 +321,31 @@ function CourseListRow({ course, enrolled = false }) {
   );
 }
 
+// One tile of the catalogue stats strip. From `sm` up it is left-aligned with a
+// fixed-size icon box, so every icon and every text column lines up the same in
+// all four tiles (the first tile starts flush with the page's left edge). On
+// phones the icon is hidden and the content is centred in a two-column grid.
+function StatTile({ icon: Icon, tone, value, label, className = "" }) {
+  return (
+    <div
+      className={`flex min-w-0 items-center justify-center gap-3 px-3 py-5 sm:justify-start sm:px-6 sm:py-6 sm:first:pl-0 ${className}`}
+    >
+      <span
+        className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:flex ${tone}`}
+      >
+        <Icon size={20} />
+      </span>
+
+      <div className="min-w-0">
+        <p className="truncate text-lg font-bold leading-6 text-heading sm:text-xl">
+          {value}
+        </p>
+        <p className="truncate text-xs text-body sm:text-sm">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function Courses() {
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -441,24 +469,33 @@ export default function Courses() {
         <div className="pointer-events-none absolute -right-24 top-20 h-72 w-72 rounded-full bg-secondary/10 blur-3xl" />
 
         <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:py-20">
-          <div className="text-center lg:text-left">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary">
+          <Stagger immediate className="text-center lg:text-left">
+            <m.div
+              variants={fadeUp}
+              className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary"
+            >
               <Sparkles size={14} />
               Explore. Learn. Grow.
-            </div>
+            </m.div>
 
-            <h1 className="max-w-3xl text-3xl font-bold leading-tight tracking-tight text-heading sm:text-4xl lg:text-5xl">
+            <m.h1
+              variants={fadeUp}
+              className="max-w-3xl text-3xl font-bold leading-tight tracking-tight text-heading sm:text-4xl lg:text-5xl"
+            >
               Discover courses that help you{" "}
               <span className="text-primary">move forward.</span>
-            </h1>
+            </m.h1>
 
-            <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-body sm:text-base lg:mx-0 lg:text-lg">
+            <m.p
+              variants={fadeUp}
+              className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-body sm:text-base lg:mx-0 lg:text-lg"
+            >
               Explore practical courses designed to help you develop valuable
               knowledge, strengthen your skills, and achieve your learning
               goals.
-            </p>
+            </m.p>
 
-            <div className="mx-auto mt-7 max-w-2xl lg:mx-0">
+            <m.div variants={fadeUp} className="mx-auto mt-7 max-w-2xl lg:mx-0">
               <div className="group flex items-center rounded-2xl border border-line bg-white p-2 shadow-lg shadow-gray-200/50 focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/10">
                 <Search
                   size={21}
@@ -513,11 +550,16 @@ export default function Courses() {
                   Certificates
                 </span>
               </div>
-            </div>
-          </div>
+            </m.div>
+          </Stagger>
 
           {/* Featured course is real data from Redux */}
-          <div className="relative mx-auto w-full max-w-lg">
+          <Reveal
+            immediate
+            delay={0.2}
+            y={24}
+            className="relative mx-auto w-full max-w-lg"
+          >
             {featuredCourse ? (
               <Link
                 to={
@@ -593,61 +635,50 @@ export default function Courses() {
                 </div>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* Real catalogue stats */}
       <section className="border-b border-line bg-white">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-y divide-line px-4 sm:grid-cols-4 sm:divide-y-0 sm:px-6">
-          <div className="flex items-center justify-center gap-3 px-3 py-5 sm:py-6">
-            <BookOpen className="hidden text-primary sm:block" size={22} />
-            <div>
-              <p className="text-lg font-bold text-heading sm:text-xl">
-                {loading ? "—" : courses.length}
-              </p>
-              <p className="text-xs text-body sm:text-sm">Published courses</p>
-            </div>
-          </div>
+        <div className="mx-auto grid max-w-7xl grid-cols-2 px-4 sm:grid-cols-4 sm:px-6">
+          <StatTile
+            icon={BookOpen}
+            tone="bg-primary/10 text-primary"
+            value={loading ? "—" : courses.length}
+            label="Published courses"
+            className="border-b border-line sm:border-b-0"
+          />
 
-          <div className="flex items-center justify-center gap-3 px-3 py-5 sm:py-6">
-            <GraduationCap
-              className="hidden text-secondary sm:block"
-              size={22}
-            />
-            <div>
-              <p className="text-lg font-bold text-heading sm:text-xl">
-                {categories.length}
-              </p>
-              <p className="text-xs text-body sm:text-sm">Course categories</p>
-            </div>
-          </div>
+          <StatTile
+            icon={GraduationCap}
+            tone="bg-secondary/10 text-secondary"
+            value={categories.length}
+            label="Course categories"
+            className="border-b border-l border-line sm:border-b-0"
+          />
 
-          <div className="flex items-center justify-center gap-3 px-3 py-5 sm:py-6">
-            <Tag className="hidden text-primary sm:block" size={22} />
-            <div>
-              <p className="text-lg font-bold text-heading sm:text-xl">
-                {loading ? "—" : filteredCourses.length}
-              </p>
-              <p className="text-xs text-body sm:text-sm">Matching courses</p>
-            </div>
-          </div>
+          <StatTile
+            icon={Tag}
+            tone="bg-primary/10 text-primary"
+            value={loading ? "—" : filteredCourses.length}
+            label="Matching courses"
+            className="sm:border-l sm:border-line"
+          />
 
-          <div className="flex items-center justify-center gap-3 px-3 py-5 sm:py-6">
-            <Award className="hidden text-secondary sm:block" size={22} />
-            <div>
-              <p className="text-lg font-bold text-heading sm:text-xl">
-                Learning
-              </p>
-              <p className="text-xs text-body sm:text-sm">Earn as you learn</p>
-            </div>
-          </div>
+          <StatTile
+            icon={Award}
+            tone="bg-secondary/10 text-secondary"
+            value="Learning"
+            label="Earn as you learn"
+            className="border-l border-line"
+          />
         </div>
       </section>
 
       {/* Categories */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-16">
-        <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <Reveal className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <span className="text-xs font-bold uppercase tracking-widest text-primary">
               Explore by category
@@ -672,10 +703,10 @@ export default function Courses() {
               Clear category
             </button>
           )}
-        </div>
+        </Reveal>
 
         {categories.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          <Reveal className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {categories.map((category) => {
               const isActive = activeCategory === category;
 
@@ -713,7 +744,7 @@ export default function Courses() {
                 </button>
               );
             })}
-          </div>
+          </Reveal>
         ) : (
           <p className="rounded-2xl border border-dashed border-line bg-white p-6 text-sm text-body">
             Course categories will appear here when published courses are
@@ -984,23 +1015,44 @@ export default function Courses() {
             </div>
           ) : view === "grid" ? (
             <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {visibleCourses.map((course) => (
-                <CourseCard
+              {visibleCourses.map((course, index) => (
+                <m.div
                   key={course.id}
-                  course={course}
-                  enrolled={isEnrolled(course.id)}
-                  fullWidth
-                />
+                  className="h-full min-w-0"
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.4,
+                    ease: EASE,
+                    delay: (index % PAGE_SIZE) * 0.04,
+                  }}
+                >
+                  <CourseCard
+                    course={course}
+                    enrolled={isEnrolled(course.id)}
+                    fullWidth
+                  />
+                </m.div>
               ))}
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {visibleCourses.map((course) => (
-                <CourseListRow
+              {visibleCourses.map((course, index) => (
+                <m.div
                   key={course.id}
-                  course={course}
-                  enrolled={isEnrolled(course.id)}
-                />
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.35,
+                    ease: EASE,
+                    delay: (index % PAGE_SIZE) * 0.04,
+                  }}
+                >
+                  <CourseListRow
+                    course={course}
+                    enrolled={isEnrolled(course.id)}
+                  />
+                </m.div>
               ))}
             </div>
           )}
@@ -1022,7 +1074,7 @@ export default function Courses() {
 
       {/* Why SAGE */}
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:py-20">
-        <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+        <Reveal className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
           <div>
             <span className="text-xs font-bold uppercase tracking-widest text-primary">
               Why learn with SAGE?
@@ -1073,13 +1125,13 @@ export default function Courses() {
               );
             })}
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* Learning journey */}
       <section className="bg-surface-muted">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:py-20">
-          <div className="mx-auto max-w-2xl text-center">
+          <Reveal className="mx-auto max-w-2xl text-center">
             <span className="text-xs font-bold uppercase tracking-widest text-primary">
               Your learning journey
             </span>
@@ -1092,9 +1144,12 @@ export default function Courses() {
               Discover a course, develop your knowledge, and move forward with
               confidence.
             </p>
-          </div>
+          </Reveal>
 
-          <div className="relative mt-10 grid gap-8 sm:grid-cols-3">
+          <Stagger
+            stagger={0.12}
+            className="relative mt-10 grid gap-8 sm:grid-cols-3"
+          >
             {[
               {
                 number: "01",
@@ -1118,7 +1173,11 @@ export default function Courses() {
               const Icon = step.icon;
 
               return (
-                <div key={step.number} className="relative text-center">
+                <m.div
+                  key={step.number}
+                  variants={fadeUp}
+                  className="relative text-center"
+                >
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-4 border-surface-muted bg-primary text-white shadow-lg">
                     <Icon size={19} />
                   </div>
@@ -1134,16 +1193,19 @@ export default function Courses() {
                   <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-body">
                     {step.text}
                   </p>
-                </div>
+                </m.div>
               );
             })}
-          </div>
+          </Stagger>
         </div>
       </section>
 
       {/* Final CTA */}
       <section className="px-4 py-14 sm:px-6 lg:py-20">
-        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-[#8f0000] px-6 py-12 text-center text-white shadow-xl sm:px-10 lg:px-16 lg:py-16">
+        <Reveal
+          y={24}
+          className="relative mx-auto max-w-7xl overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-[#8f0000] px-6 py-12 text-center text-white shadow-xl sm:px-10 lg:px-16 lg:py-16"
+        >
           <div className="relative mx-auto max-w-3xl">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10">
               <GraduationCap size={25} />
@@ -1181,7 +1243,7 @@ export default function Courses() {
               </button>
             </div>
           </div>
-        </div>
+        </Reveal>
 
         <div className="mx-auto mt-10 max-w-7xl">
           <BecomeInstructorCTA />

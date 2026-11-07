@@ -97,6 +97,7 @@ import PaymentResult from "./pages/PaymentResult";
 import BankTransfers from "./pages/admin/BankTransfer";
 import Wishlist from "./pages/WishList";
 import GuestRoute from "./routes/GuestRoutes";
+import { MotionProvider } from "./components/motion";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -106,7 +107,7 @@ const App = () => {
   }, [dispatch]);
 
   return (
-    <>
+    <MotionProvider>
       <Routes>
         {/* PUBLIC ROUTES */}
         <Route path="/" element={<Homepage />} />
@@ -374,7 +375,7 @@ const App = () => {
         draggable
         theme="light"
       />
-    </>
+    </MotionProvider>
   );
 };
 

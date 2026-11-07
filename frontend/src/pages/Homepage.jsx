@@ -14,6 +14,7 @@ import {
 
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { m } from "framer-motion";
 
 import Navbar from "../components/Navbar";
 
@@ -24,6 +25,13 @@ import FeatureCard from "../components/FeatureCard";
 import CourseSlider from "../components/CourseSlider";
 
 import Footer from "../components/Footer";
+import {
+  Reveal,
+  Stagger,
+  StaggerItem,
+  fadeUp,
+  popIn,
+} from "../components/motion";
 
 import { fetchPublishedCourses } from "../store/courseSlice";
 import { enrollmentApi } from "../api/enrollmentApi";
@@ -376,36 +384,51 @@ export default function Homepage() {
 
         <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-5 py-12 sm:px-6 sm:py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:px-8 lg:py-24">
           {/* ==================================================
-              HERO CONTENT
+              HERO CONTENT (staggers in on load)
           ================================================== */}
-          <div className="text-center lg:text-left">
+          <Stagger immediate className="text-center lg:text-left">
             {/* Small badge */}
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-red-100 bg-white px-3.5 py-2 text-xs font-semibold text-primary shadow-sm">
+            <m.div
+              variants={fadeUp}
+              className="mb-5 inline-flex items-center gap-2 rounded-full border border-red-100 bg-white px-3.5 py-2 text-xs font-semibold text-primary shadow-sm"
+            >
               <Sparkles size={14} />
               Learn. Grow. Lead.
-            </div>
+            </m.div>
 
             {/* Heading */}
-            <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight text-gray-950 sm:text-5xl lg:mx-0 lg:text-6xl">
+            <m.h1
+              variants={fadeUp}
+              className="mx-auto max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight text-gray-950 sm:text-5xl lg:mx-0 lg:text-6xl"
+            >
               Build Skills That{" "}
               <span className="relative inline-block text-primary">
                 Move Your Career
               </span>{" "}
               Forward.
-            </h1>
+            </m.h1>
 
             {/* Accent line */}
-            <div className="mx-auto mt-6 h-1.5 w-20 rounded-full bg-secondary lg:mx-0" />
+            <m.div
+              variants={fadeUp}
+              className="mx-auto mt-6 h-1.5 w-20 rounded-full bg-secondary lg:mx-0"
+            />
 
             {/* Description */}
-            <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-gray-600 sm:text-lg lg:mx-0">
+            <m.p
+              variants={fadeUp}
+              className="mx-auto mt-6 max-w-xl text-base leading-7 text-gray-600 sm:text-lg lg:mx-0"
+            >
               Learn practical, career-focused skills from experienced
               professionals. Build your knowledge, advance your career, and
               learn at your own pace with SAGE.
-            </p>
+            </m.p>
 
             {/* CTA buttons */}
-            <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center lg:justify-start">
+            <m.div
+              variants={fadeUp}
+              className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center lg:justify-start"
+            >
               <Link to="/create-account" className="w-full sm:w-auto">
                 <PrimaryButton className="flex w-full cursor-pointer items-center justify-center gap-2 px-6 py-3 text-sm font-semibold shadow-lg shadow-red-900/10 transition duration-200 hover:-translate-y-0.5 sm:w-auto sm:px-7 sm:py-3.5 sm:text-base">
                   Get Started
@@ -419,10 +442,13 @@ export default function Homepage() {
                   Explore Courses
                 </SecondaryButton>
               </Link>
-            </div>
+            </m.div>
 
             {/* Trust indicators */}
-            <div className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs text-gray-500 lg:justify-start">
+            <m.div
+              variants={fadeUp}
+              className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs text-gray-500 lg:justify-start"
+            >
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={15} className="text-emerald-600" />
                 Expert-led learning
@@ -437,13 +463,18 @@ export default function Homepage() {
                 <CheckCircle2 size={15} className="text-emerald-600" />
                 Career focused
               </div>
-            </div>
-          </div>
+            </m.div>
+          </Stagger>
 
           {/* ==================================================
               HERO VISUAL
           ================================================== */}
-          <div className="relative mx-auto w-full max-w-xl lg:max-w-none">
+          <Reveal
+            immediate
+            delay={0.25}
+            y={24}
+            className="relative mx-auto w-full max-w-xl lg:max-w-none"
+          >
             {/* Decorative card behind image */}
             <div className="absolute -right-4 -top-4 h-full w-full rounded-[2rem] bg-secondary/10 sm:-right-6 sm:-top-6" />
 
@@ -484,7 +515,10 @@ export default function Homepage() {
             </div>
 
             {/* Floating rating card */}
-            <div className="absolute -left-3 top-5 rounded-2xl border border-white bg-white p-3 shadow-xl shadow-gray-900/10 sm:-left-6 sm:top-10 sm:p-4">
+            <m.div
+              {...popIn(0.8)}
+              className="absolute -left-3 top-5 rounded-2xl border border-white bg-white p-3 shadow-xl shadow-gray-900/10 sm:-left-6 sm:top-10 sm:p-4"
+            >
               <div className="flex items-center gap-2">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-50">
                   <Star size={17} className="fill-amber-400 text-amber-400" />
@@ -496,10 +530,13 @@ export default function Homepage() {
                   <p className="text-[10px] text-gray-500">Learner rating</p>
                 </div>
               </div>
-            </div>
+            </m.div>
 
             {/* Floating students card */}
-            <div className="absolute -bottom-5 -right-2 rounded-2xl border border-white bg-white px-4 py-3 shadow-xl shadow-gray-900/10 sm:-right-5 sm:px-5 sm:py-4">
+            <m.div
+              {...popIn(1)}
+              className="absolute -bottom-5 -right-2 rounded-2xl border border-white bg-white px-4 py-3 shadow-xl shadow-gray-900/10 sm:-right-5 sm:px-5 sm:py-4"
+            >
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-secondary">
                   <Users size={19} />
@@ -513,8 +550,8 @@ export default function Homepage() {
                   </p>
                 </div>
               </div>
-            </div>
-          </div>
+            </m.div>
+          </Reveal>
         </div>
       </section>
 
@@ -522,24 +559,30 @@ export default function Homepage() {
           TRUST / STATISTICS BAR
       ====================================================== */}
       <section className="border-y border-gray-100 bg-white">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-gray-100 px-5 sm:grid-cols-4 sm:px-6 lg:px-8">
-          <div className="px-3 py-6 text-center sm:py-7">
+        <Stagger
+          stagger={0.07}
+          className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-gray-100 px-5 sm:grid-cols-4 sm:px-6 lg:px-8"
+        >
+          <m.div variants={fadeUp} className="px-3 py-6 text-center sm:py-7">
             <p className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
               1K+
             </p>
 
             <p className="mt-1 text-xs text-gray-500 sm:text-sm">Learners</p>
-          </div>
+          </m.div>
 
-          <div className="px-3 py-6 text-center sm:py-7">
+          <m.div variants={fadeUp} className="px-3 py-6 text-center sm:py-7">
             <p className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
               100+
             </p>
 
             <p className="mt-1 text-xs text-gray-500 sm:text-sm">Courses</p>
-          </div>
+          </m.div>
 
-          <div className="border-t border-gray-100 px-3 py-6 text-center sm:border-t-0 sm:py-7">
+          <m.div
+            variants={fadeUp}
+            className="border-t border-gray-100 px-3 py-6 text-center sm:border-t-0 sm:py-7"
+          >
             <p className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
               20+
             </p>
@@ -547,9 +590,12 @@ export default function Homepage() {
             <p className="mt-1 text-xs text-gray-500 sm:text-sm">
               Expert Instructors
             </p>
-          </div>
+          </m.div>
 
-          <div className="border-t border-gray-100 px-3 py-6 text-center sm:border-t-0 sm:py-7">
+          <m.div
+            variants={fadeUp}
+            className="border-t border-gray-100 px-3 py-6 text-center sm:border-t-0 sm:py-7"
+          >
             <p className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
               95%
             </p>
@@ -557,15 +603,15 @@ export default function Homepage() {
             <p className="mt-1 text-xs text-gray-500 sm:text-sm">
               Learner Satisfaction
             </p>
-          </div>
-        </div>
+          </m.div>
+        </Stagger>
       </section>
 
       {/* ======================================================
           FEATURES
       ====================================================== */}
       <section className="mx-auto max-w-7xl px-5 py-12 sm:px-6 lg:px-8 lg:py-16">
-        <div className="mb-8 max-w-2xl">
+        <Reveal className="mb-8 max-w-2xl">
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-primary">
             Why choose SAGE
           </p>
@@ -578,13 +624,15 @@ export default function Homepage() {
             Everything you need to build relevant skills, stay motivated, and
             make meaningful progress.
           </p>
-        </div>
+        </Reveal>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <Stagger stagger={0.1} className="grid gap-4 md:grid-cols-3">
           {FEATURES.map((feature) => (
-            <FeatureCard key={feature.title} {...feature} />
+            <StaggerItem key={feature.title}>
+              <FeatureCard {...feature} />
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </section>
 
       {/* ======================================================
@@ -593,7 +641,7 @@ export default function Homepage() {
       <section className="overflow-hidden bg-gray-950">
         <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-5 py-14 sm:px-6 sm:py-16 lg:grid-cols-2 lg:px-8 lg:py-20">
           {/* Content */}
-          <div>
+          <Reveal>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-red-300">
               The SAGE experience
             </p>
@@ -628,10 +676,10 @@ export default function Homepage() {
                 </PrimaryButton>
               </Link>
             </div>
-          </div>
+          </Reveal>
 
           {/* Visual */}
-          <div className="relative">
+          <Reveal delay={0.12} className="relative">
             {isStudent ? (
               // ==========================================
               // STUDENT: LEARNING PROGRESS (real data)
@@ -711,12 +759,15 @@ export default function Homepage() {
 
             {/* Decorative element */}
             <div className="absolute -bottom-8 -right-8 -z-0 h-32 w-32 rounded-full bg-primary/20 blur-2xl" />
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ======================================================
           COURSE ROWS (real published courses)
+
+          Each row only fades in as a whole (no movement), so it never
+          fights with Swiper's horizontal swiping inside it.
       ====================================================== */}
       {loadingCourses && (
         <section className="bg-white py-14">
@@ -738,21 +789,27 @@ export default function Homepage() {
       {/* POPULAR: most enrolled (newest first until anyone has enrolled) */}
       {!loadingCourses && popular.length > 0 && (
         <section className="bg-white pt-12 sm:pt-16">
-          <CourseSlider title="Popular Courses" courses={popular} />
+          <Reveal y={0}>
+            <CourseSlider title="Popular Courses" courses={popular} />
+          </Reveal>
         </section>
       )}
 
       {/* FEATURED: courses an admin has chosen to feature */}
       {!loadingCourses && featured.length > 0 && (
         <section className="bg-gray-50 pt-2">
-          <CourseSlider title="Featured Courses" courses={featured} />
+          <Reveal y={0}>
+            <CourseSlider title="Featured Courses" courses={featured} />
+          </Reveal>
         </section>
       )}
 
       {/* TRENDING: most new enrollments over the last 30 days */}
       {!loadingCourses && trending.length > 0 && (
         <section className="bg-white pt-2">
-          <CourseSlider title="Trending Courses" courses={trending} />
+          <Reveal y={0}>
+            <CourseSlider title="Trending Courses" courses={trending} />
+          </Reveal>
         </section>
       )}
 
@@ -760,7 +817,10 @@ export default function Homepage() {
           FINAL CTA
       ====================================================== */}
       <section className="px-5 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-[#980000] to-[#720000] px-6 py-12 text-center shadow-xl shadow-red-900/15 sm:px-10 lg:px-16 lg:py-16">
+        <Reveal
+          y={24}
+          className="relative mx-auto max-w-7xl overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-[#980000] to-[#720000] px-6 py-12 text-center shadow-xl shadow-red-900/15 sm:px-10 lg:px-16 lg:py-16"
+        >
           {/* Decorations */}
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
 
@@ -801,7 +861,7 @@ export default function Homepage() {
               </Link>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* ======================================================

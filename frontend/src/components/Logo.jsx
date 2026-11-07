@@ -1,4 +1,4 @@
-import logoDefault from "../../public/assets/Group 15.png";
+// import logoDefault from "../../public/assets/Group 15.png";
 // import logoLight from "../../assets/sage-crest-light.png";
 
 /**
@@ -15,6 +15,8 @@ export default function Logo({
   size = 44,
   variant = "default",
 }) {
+  const logoDefault = "/assets/Group 15.png";
+
   const isLight = variant === "light";
   const crestSrc = isLight
     ? logoDefault /* swap for logoLight once added */
