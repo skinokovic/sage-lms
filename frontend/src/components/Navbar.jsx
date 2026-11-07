@@ -102,7 +102,7 @@ export default function Navbar() {
           </nav>
 
           <div className="flex shrink-0 items-center gap-1">
-            <button
+            {/* <button
               type="button"
               onClick={() => setSearchOpen((v) => !v)}
               aria-label="Search courses"
@@ -110,7 +110,7 @@ export default function Navbar() {
               className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-heading transition-colors hover:bg-surface-muted"
             >
               <Search size={19} />
-            </button>
+            </button> */}
             {user && (
               <Link
                 to="/wishlist"
