@@ -98,6 +98,7 @@ import BankTransfers from "./pages/admin/BankTransfer";
 import Wishlist from "./pages/WishList";
 import GuestRoute from "./routes/GuestRoutes";
 import { MotionProvider } from "./components/motion";
+import ChatWidget from "./components/assistant/ChatWidget";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -375,6 +376,8 @@ const App = () => {
         draggable
         theme="light"
       />
+
+      <ChatWidget />
     </MotionProvider>
   );
 };

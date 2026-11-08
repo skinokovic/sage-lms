@@ -37,6 +37,7 @@ import subscriberRoutes from "./routes/subscriberRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
+import assistantRoutes from "./routes/assistantRoutes.js";
 
 connectDB();
 
@@ -125,8 +126,9 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/subscribers", subscriberRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/public", publicRoutes);
-
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/assistant", assistantRoutes);
+
 // --- Error handling (must be last) ---
 app.use(notFound);
 app.use(errorHandler);
