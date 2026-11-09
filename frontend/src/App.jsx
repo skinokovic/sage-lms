@@ -99,6 +99,7 @@ import Wishlist from "./pages/WishList";
 import GuestRoute from "./routes/GuestRoutes";
 import { MotionProvider } from "./components/motion";
 import ChatWidget from "./components/assistant/ChatWidget";
+import AdminCoupons from "./pages/admin/Coupons";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -150,6 +151,9 @@ const App = () => {
           <Route element={<RoleProtectedRoute allowedRoles={["admin"]} />}>
             <Route path="/dashboard/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
+
+              {/* Admin coupons */}
+              <Route path="coupons" element={<AdminCoupons />} />
 
               {/* Admin instructor-applications */}
               <Route

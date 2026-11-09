@@ -13,6 +13,7 @@ import {
   Mail,
   MessageSquare,
   Star,
+  Ticket,
 } from "lucide-react";
 
 const AdminLayout = () => {
@@ -43,6 +44,7 @@ const AdminLayout = () => {
       path: "/dashboard/admin/courses",
       icon: BookOpen,
     },
+    { label: "Coupons", path: "/dashboard/admin/coupons", icon: Ticket },
     {
       label: "Assignments",
       path: "/dashboard/admin/assignments",

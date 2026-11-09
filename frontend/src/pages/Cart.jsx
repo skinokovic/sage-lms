@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,9 +19,11 @@ import {
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Logo from "../components/Logo";
+import CouponBox from "../components/CouponBox";
 import axiosClient from "../api/axiosClient";
 import { toast } from "react-toastify";
 import useEnrolledCourses from "../hooks/userEnrollment";
+import useCoupon from "../hooks/useCoupon";
 
 const CART_KEY = "sage_cart";
 
@@ -43,11 +45,14 @@ const money = (value) =>
 
 export default function Cart() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [items, setItems] = useState(readCart);
-  const [coupon, setCoupon] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState(false);
   const [synced, setSynced] = useState(false);
+
+  // The coupon applied to this cart (the server works out every price)
+  const coupon = useCoupon(items);
 
   // Courses the student already owns can't be bought again
   const { enrolledIds, ready: enrollmentsReady } = useEnrolledCourses();
@@ -145,6 +150,29 @@ export default function Cart() {
     };
   }, []);
 
+  // A coupon link (/cart?coupon=CODE) applies itself once the cart is ready.
+  // With an empty cart the code is kept until a course is added.
+  const urlCoupon = searchParams.get("coupon");
+  const urlCouponHandled = useRef(false);
+
+  useEffect(() => {
+    if (!urlCoupon || !synced || urlCouponHandled.current) return;
+    urlCouponHandled.current = true;
+
+    if (items.length === 0) {
+      coupon.stash(urlCoupon);
+      toast.info(
+        `Coupon ${urlCoupon.toUpperCase()} is saved. Add a course to use it.`,
+      );
+      return;
+    }
+
+    coupon.apply(urlCoupon).then((ok) => {
+      if (ok) toast.success("Coupon applied.");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlCoupon, synced]);
+
   const subtotal = useMemo(
     () =>
       items.reduce(
@@ -173,6 +201,11 @@ export default function Cart() {
   );
 
   const savings = Math.max(originalTotal - subtotal, 0);
+
+  // With a coupon, the server's figure is the total
+  const couponDiscount = coupon.quote?.discount || 0;
+  const payable = coupon.quote ? coupon.quote.total : subtotal;
+  const totalSavings = savings + couponDiscount;
 
   const updateStorage = (next) => {
     setItems(next);
@@ -313,109 +346,130 @@ export default function Cart() {
               )}
 
               <div className="space-y-4">
-                {items.map((item) => (
-                  <article
-                    key={item.id}
-                    className="rounded-2xl border border-line bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5"
-                  >
-                    <div className="flex flex-col gap-4 sm:flex-row">
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="h-44 w-full rounded-xl object-cover sm:h-28 sm:w-44"
-                        />
-                      ) : (
-                        <div className="flex h-44 w-full items-center justify-center rounded-xl bg-slate-100 text-primary sm:h-28 sm:w-44">
-                          <BookOpen size={30} />
-                        </div>
-                      )}
+                {items.map((item) => {
+                  const quantity = Number(item.quantity || 1);
+                  const listLine = Number(item.price || 0) * quantity;
+                  const lineQuote = coupon.itemQuote(item.courseId || item.id);
+                  const couponOff = Boolean(
+                    lineQuote && lineQuote.discount > 0,
+                  );
+                  const compareAt = Number(item.originalPrice || 0) * quantity;
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
-                              {item.category || "Course"}
-                            </span>
-                            {item.unavailable && (
-                              <span className="ml-2 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800">
-                                Unavailable
-                              </span>
-                            )}
-                            <h3 className="mt-1 line-clamp-2 text-base font-bold leading-6 sm:text-lg">
-                              {item.title}
-                            </h3>
+                  return (
+                    <article
+                      key={item.id}
+                      className="rounded-2xl border border-line bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5"
+                    >
+                      <div className="flex flex-col gap-4 sm:flex-row">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            className="h-44 w-full rounded-xl object-cover sm:h-28 sm:w-44"
+                          />
+                        ) : (
+                          <div className="flex h-44 w-full items-center justify-center rounded-xl bg-slate-100 text-primary sm:h-28 sm:w-44">
+                            <BookOpen size={30} />
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => removeItem(item.id)}
-                            className="rounded-lg p-2 text-body cursor-pointer hover:bg-red-50 hover:text-red-600"
-                            aria-label={`Remove ${item.title}`}
-                          >
-                            <Trash2 size={17} />
-                          </button>
-                        </div>
+                        )}
 
-                        <p className="mt-1 text-sm text-body">
-                          {item.instructor || "SAGE Instructor"}
-                        </p>
-
-                        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-body">
-                          <span className="flex items-center gap-1.5">
-                            <BookOpen size={14} /> Structured lessons
-                          </span>
-                          <span className="flex items-center gap-1.5">
-                            <Clock3 size={14} /> {item.duration || "Self-paced"}
-                          </span>
-                          <span className="flex items-center gap-1.5">
-                            <Users size={14} /> Lifetime access
-                          </span>
-                        </div>
-
-                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                          {/* <div className="flex items-center rounded-lg border border-line">
-                            <button
-                              type="button"
-                              onClick={() => changeQuantity(item.id, -1)}
-                              className="p-2.5 text-body hover:text-heading"
-                              aria-label="Decrease quantity"
-                            >
-                              <Minus size={15} />
-                            </button>
-                            <span className="min-w-8 text-center text-sm font-bold">
-                              {item.quantity || 1}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => changeQuantity(item.id, 1)}
-                              className="p-2.5 text-body hover:text-heading"
-                              aria-label="Increase quantity"
-                            >
-                              <Plus size={15} />
-                            </button>
-                          </div> */}
-
-                          <div className="">
-                            <p className="text-lg font-bold text-heading">
-                              {money(
-                                Number(item.price || 0) *
-                                  Number(item.quantity || 1),
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                                {item.category || "Course"}
+                              </span>
+                              {item.unavailable && (
+                                <span className="ml-2 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800">
+                                  Unavailable
+                                </span>
                               )}
-                            </p>
-                            {item.originalPrice && (
-                              <p className="text-xs text-body line-through">
+                              <h3 className="mt-1 line-clamp-2 text-base font-bold leading-6 sm:text-lg">
+                                {item.title}
+                              </h3>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(item.id)}
+                              className="rounded-lg p-2 text-body cursor-pointer hover:bg-red-50 hover:text-red-600"
+                              aria-label={`Remove ${item.title}`}
+                            >
+                              <Trash2 size={17} />
+                            </button>
+                          </div>
+
+                          <p className="mt-1 text-sm text-body">
+                            {item.instructor || "SAGE Instructor"}
+                          </p>
+
+                          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-body">
+                            <span className="flex items-center gap-1.5">
+                              <BookOpen size={14} /> Structured lessons
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Clock3 size={14} />{" "}
+                              {item.duration || "Self-paced"}
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Users size={14} /> Lifetime access
+                            </span>
+                          </div>
+
+                          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                            {/* <div className="flex items-center rounded-lg border border-line">
+                              <button
+                                type="button"
+                                onClick={() => changeQuantity(item.id, -1)}
+                                className="p-2.5 text-body hover:text-heading"
+                                aria-label="Decrease quantity"
+                              >
+                                <Minus size={15} />
+                              </button>
+                              <span className="min-w-8 text-center text-sm font-bold">
+                                {item.quantity || 1}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => changeQuantity(item.id, 1)}
+                                className="p-2.5 text-body hover:text-heading"
+                                aria-label="Increase quantity"
+                              >
+                                <Plus size={15} />
+                              </button>
+                            </div> */}
+
+                            <div>
+                              <p className="text-lg font-bold text-heading">
                                 {money(
-                                  Number(item.originalPrice) *
-                                    Number(item.quantity || 1),
+                                  couponOff ? lineQuote.finalPrice : listLine,
                                 )}
                               </p>
+
+                              {couponOff ? (
+                                <p className="text-xs text-body line-through">
+                                  {money(listLine)}
+                                </p>
+                              ) : (
+                                compareAt > listLine && (
+                                  <p className="text-xs text-body line-through">
+                                    {money(compareAt)}
+                                  </p>
+                                )
+                              )}
+                            </div>
+
+                            {couponOff && (
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                                <Tag size={12} />
+                                Coupon applied
+                              </span>
                             )}
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             </section>
 
@@ -447,32 +501,24 @@ export default function Cart() {
                       </span>
                       <span className="font-semibold">-{money(savings)}</span>
                     </div>
+                    {coupon.quote && (
+                      <div className="flex justify-between gap-4 text-emerald-700">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <Tag size={14} className="shrink-0" />
+                          <span className="truncate">
+                            Coupon ({coupon.quote.coupon.code})
+                          </span>
+                        </span>
+                        <span className="font-semibold">
+                          -{money(couponDiscount)}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="my-5 border-t border-line" />
 
-                  <label className="block text-xs font-bold text-heading">
-                    Coupon code
-                    <div className="mt-2 flex gap-2">
-                      <input
-                        value={coupon}
-                        onChange={(e) => setCoupon(e.target.value)}
-                        placeholder="Enter code"
-                        className="min-w-0 flex-1 rounded-xl border border-line px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          toast.info(
-                            "Coupon validation will be available when coupon support is connected to the backend.",
-                          )
-                        }
-                        className="rounded-xl border cursor-pointer border-line px-4 text-sm font-bold text-heading hover:border-primary hover:text-primary"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  </label>
+                  <CouponBox coupon={coupon} />
 
                   <div className="my-5 border-t border-line" />
 
@@ -480,12 +526,12 @@ export default function Cart() {
                     <div>
                       <p className="text-xs text-body">Total</p>
                       <p className="mt-1 text-2xl font-bold text-heading">
-                        {money(subtotal)}
+                        {coupon.loading ? "…" : money(payable)}
                       </p>
                     </div>
-                    {savings > 0 && (
+                    {totalSavings > 0 && (
                       <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                        Save {money(savings)}
+                        Save {money(totalSavings)}
                       </span>
                     )}
                   </div>

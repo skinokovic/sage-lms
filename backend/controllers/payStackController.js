@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import mongoose from "mongoose";
-import Course from "../models/Course.js"; // Adjust this import if your existing Course model has a different path/name.
+import Course from "../models/Course.js";
 import PaymentOrder from "../models/PaymentOrder.js";
 import CourseEnrollment from "../models/CourseEnrollment.js";
 import {
@@ -8,6 +8,12 @@ import {
   verifyPaystackTransaction,
   verifyPaystackSignature,
 } from "../services/paystackService.js";
+import { priceOrderWithCoupon } from "../services/couponService.js";
+
+const ACCESS_STATUSES = ["active", "completed"];
+
+const httpError = (message, statusCode) =>
+  Object.assign(new Error(message), { statusCode });
 
 const normalizeEmail = (value) =>
   String(value || "")
@@ -33,24 +39,17 @@ function validateCustomer(body) {
   const customerName = String(body.name || body.customerName || "").trim();
   const customerEmail = normalizeEmail(body.email || body.customerEmail);
   const customerPhone = String(body.phone || body.customerPhone || "").trim();
-  if (customerName.length < 2)
-    throw Object.assign(new Error("Enter your full name."), {
-      statusCode: 400,
-    });
+  if (customerName.length < 2) throw httpError("Enter your full name.", 400);
   if (!/^\S+@\S+\.\S+$/.test(customerEmail))
-    throw Object.assign(new Error("Enter a valid email address."), {
-      statusCode: 400,
-    });
+    throw httpError("Enter a valid email address.", 400);
   if (customerPhone.length < 7)
-    throw Object.assign(new Error("Enter a valid phone number."), {
-      statusCode: 400,
-    });
+    throw httpError("Enter a valid phone number.", 400);
   return { customerName, customerEmail, customerPhone };
 }
 
 async function loadAndPriceCourses(rawItems) {
   if (!Array.isArray(rawItems) || rawItems.length === 0) {
-    throw Object.assign(new Error("Your cart is empty."), { statusCode: 400 });
+    throw httpError("Your cart is empty.", 400);
   }
   const ids = [
     ...new Set(
@@ -60,39 +59,30 @@ async function loadAndPriceCourses(rawItems) {
     ),
   ];
   if (ids.some((id) => !mongoose.isValidObjectId(id))) {
-    throw Object.assign(
-      new Error(
-        "One or more course IDs are invalid. Refresh your cart and try again.",
-      ),
-      { statusCode: 400 },
+    throw httpError(
+      "One or more course IDs are invalid. Refresh your cart and try again.",
+      400,
     );
   }
   const courses = await Course.find({ _id: { $in: ids } });
   const byId = new Map(courses.map((course) => [String(course._id), course]));
   if (byId.size !== ids.length) {
-    throw Object.assign(
-      new Error("One or more courses are no longer available."),
-      { statusCode: 409 },
-    );
+    throw httpError("One or more courses are no longer available.", 409);
   }
 
   // Duplicate course IDs are removed so a course cannot be charged twice by manipulating the browser cart.
   const items = ids.map((id) => {
     const course = byId.get(id);
     if (!isPurchasable(course))
-      throw Object.assign(
-        new Error(
-          `${getCourseTitle(course)} is not currently available for purchase.`,
-        ),
-        { statusCode: 409 },
+      throw httpError(
+        `${getCourseTitle(course)} is not currently available for purchase.`,
+        409,
       );
     const price = getCoursePrice(course);
     if (!Number.isFinite(price) || price <= 0)
-      throw Object.assign(
-        new Error(
-          `${getCourseTitle(course)} does not have a valid paid-course price.`,
-        ),
-        { statusCode: 400 },
+      throw httpError(
+        `${getCourseTitle(course)} does not have a valid paid-course price.`,
+        400,
       );
     return {
       course: course._id,
@@ -100,11 +90,53 @@ async function loadAndPriceCourses(rawItems) {
       price: Math.round(price * 100) / 100,
     };
   });
-  return {
-    items,
-    amountNaira:
-      Math.round(items.reduce((sum, item) => sum + item.price, 0) * 100) / 100,
-  };
+  return { items };
+}
+
+// A student must not pay (or spend a coupon) on a course they already own.
+async function assertNotAlreadyEnrolled(user, items) {
+  const owned = await CourseEnrollment.find({
+    course: { $in: items.map((item) => item.course) },
+    status: { $in: ACCESS_STATUSES },
+    $or: [{ user: user._id }, { studentEmail: normalizeEmail(user.email) }],
+  }).select("course");
+
+  if (owned.length === 0) return;
+
+  const ownedIds = new Set(
+    owned.map((enrollment) => String(enrollment.course)),
+  );
+  const titles = items
+    .filter((item) => ownedIds.has(String(item.course)))
+    .map((item) => item.title)
+    .join(", ");
+  throw httpError(
+    `You are already enrolled in: ${titles}. Remove it from your cart to continue.`,
+    409,
+  );
+}
+
+// One enrolment per course. Safe to run any number of times.
+async function enrollOrderItems(order) {
+  for (const item of order.items) {
+    await CourseEnrollment.updateOne(
+      { course: item.course, studentEmail: order.customerEmail },
+      {
+        $setOnInsert: {
+          user: order.user,
+          course: item.course,
+          studentEmail: order.customerEmail,
+          studentName: order.customerName,
+          studentPhone: order.customerPhone,
+          paymentOrder: order._id,
+          paymentReference: order.reference,
+          status: "active",
+          enrolledAt: order.paidAt || new Date(),
+        },
+      },
+      { upsert: true },
+    );
+  }
 }
 
 async function fulfillPaidOrder(order, paystackData) {
@@ -116,11 +148,9 @@ async function fulfillPaidOrder(order, paystackData) {
     String(paystackData.currency || "").toUpperCase() !== order.currency ||
     amountKobo !== order.amountKobo
   ) {
-    throw Object.assign(
-      new Error(
-        "Paystack verification did not match the expected order amount, currency, reference, or success status.",
-      ),
-      { statusCode: 409 },
+    throw httpError(
+      "Paystack verification did not match the expected order amount, currency, reference, or success status.",
+      409,
     );
   }
 
@@ -149,56 +179,89 @@ async function fulfillPaidOrder(order, paystackData) {
   );
 
   const currentOrder = await PaymentOrder.findById(order._id);
-  for (const item of currentOrder.items) {
-    await CourseEnrollment.updateOne(
-      { course: item.course, studentEmail: currentOrder.customerEmail },
-      {
-        $setOnInsert: {
-          user: order.user,
-          course: item.course,
-          studentEmail: currentOrder.customerEmail,
-          studentName: currentOrder.customerName,
-          studentPhone: currentOrder.customerPhone,
-          paymentOrder: currentOrder._id,
-          paymentReference: currentOrder.reference,
-          status: "active",
-          enrolledAt: currentOrder.paidAt || new Date(),
-        },
-      },
-      { upsert: true },
-    );
-  }
+  await enrollOrderItems(currentOrder);
   return currentOrder;
 }
 
+const paidResponse = (order) => ({
+  success: true,
+  status: "paid",
+  message: "Payment verified and course access has been recorded.",
+  data: {
+    reference: order.reference,
+    amount: order.amountNaira,
+    currency: order.currency,
+    customerEmail: order.customerEmail,
+    courses: order.items.map((item) => ({
+      courseId: String(item.course),
+      title: item.title,
+    })),
+  },
+});
+
 export async function initializePayment(req, res, next) {
   try {
-    // const customer = validateCustomer(req.body || {});
     const customer = validateCustomer({
       ...(req.body || {}),
       email: req.user.email,
     });
     const paymentMethod = req.body?.method === "transfer" ? "transfer" : "card";
-
     const channels =
       paymentMethod === "transfer" ? ["bank_transfer"] : ["card"];
-    const { items, amountNaira } = await loadAndPriceCourses(req.body?.items);
+
+    // Prices always come from the database
+    const { items: listItems } = await loadAndPriceCourses(req.body?.items);
+    await assertNotAlreadyEnrolled(req.user, listItems);
+
+    // Apply the coupon (if any) on the server; the browser's total is never trusted
+    const pricing = await priceOrderWithCoupon({
+      items: listItems,
+      code: req.body?.couponCode,
+      userId: req.user._id,
+    });
+    const { items, subtotal, discount, amountNaira, coupon } = pricing;
     const amountKobo = Math.round(amountNaira * 100);
     const reference = `SAGE-${Date.now()}-${crypto.randomBytes(5).toString("hex")}`;
-    const order = await PaymentOrder.create({
+
+    const orderFields = {
       reference,
       user: req.user._id,
       ...customer,
       items,
+      subtotalNaira: subtotal,
+      discountNaira: discount,
+      ...(coupon ? { coupon } : {}),
       amountNaira,
       amountKobo,
       currency: "NGN",
+    };
+
+    // A coupon covered the whole price: nothing to charge, so enrol straight away.
+    if (amountNaira === 0) {
+      const order = await PaymentOrder.create({
+        ...orderFields,
+        method: "coupon",
+        status: "paid",
+        paidAt: new Date(),
+      });
+      await enrollOrderItems(order);
+
+      return res.status(201).json({
+        success: true,
+        message: "You’re enrolled. No payment was needed.",
+        data: { free: true, reference, amount: 0, currency: "NGN" },
+      });
+    }
+
+    const order = await PaymentOrder.create({
+      ...orderFields,
+      method: paymentMethod,
       status: "pending",
     });
 
     try {
       const clientUrl = String(
-        process.env.VITE_CLIENT_URL || "http://localhost:5173",
+        process.env.CLIENT_URL || "http://localhost:5173",
       ).replace(/\/$/, "");
       const transaction = await initializePaystackTransaction({
         email: customer.customerEmail,
@@ -209,6 +272,7 @@ export async function initializePayment(req, res, next) {
         metadata: {
           orderId: String(order._id),
           customerName: customer.customerName,
+          couponCode: coupon?.code || "",
           custom_fields: [
             {
               display_name: "SAGE Order Reference",
@@ -253,13 +317,19 @@ export async function verifyPayment(req, res, next) {
       return res
         .status(400)
         .json({ success: false, message: "Payment reference is required." });
-    // const order = await PaymentOrder.findOne({ reference });
     const order = await PaymentOrder.findOne({ reference, user: req.user._id });
     if (!order)
       return res.status(404).json({
         success: false,
         message: "No order was found for this payment reference.",
       });
+
+    // Already settled (a free coupon order, or the webhook got there first):
+    // there is nothing to ask Paystack, just make sure access is recorded.
+    if (order.status === "paid") {
+      await enrollOrderItems(order);
+      return res.json(paidResponse(order));
+    }
 
     const transaction = await verifyPaystackTransaction(reference);
     if (transaction.reference !== order.reference) {
@@ -272,21 +342,7 @@ export async function verifyPayment(req, res, next) {
 
     if (transaction.status === "success") {
       const paidOrder = await fulfillPaidOrder(order, transaction);
-      return res.json({
-        success: true,
-        status: "paid",
-        message: "Payment verified and course access has been recorded.",
-        data: {
-          reference: paidOrder.reference,
-          amount: paidOrder.amountNaira,
-          currency: paidOrder.currency,
-          customerEmail: paidOrder.customerEmail,
-          courses: paidOrder.items.map((item) => ({
-            courseId: String(item.course),
-            title: item.title,
-          })),
-        },
-      });
+      return res.json(paidResponse(paidOrder));
     }
 
     if (

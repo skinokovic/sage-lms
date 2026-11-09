@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,6 +14,7 @@ import {
   MapPin,
   Phone,
   ShieldCheck,
+  Tag,
   User,
   WalletCards,
   Copy,
@@ -22,7 +23,9 @@ import {
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Logo from "../components/Logo";
+import CouponBox from "../components/CouponBox";
 import axiosClient from "../api/axiosClient";
+import useCoupon from "../hooks/useCoupon";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 
@@ -88,6 +91,7 @@ const todayInputValue = () => {
 };
 
 export default function Checkout() {
+  const navigate = useNavigate();
   const { user, status: authStatus } = useSelector((state) => state.auth);
   const isStudent = user?.role === "student";
   const authChecking = authStatus === "checking";
@@ -105,6 +109,9 @@ export default function Checkout() {
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // The coupon applied in the cart (the server works out every price)
+  const coupon = useCoupon(items);
 
   // Manual bank transfer
   const isBankTransfer = method === "bank_transfer";
@@ -263,15 +270,28 @@ export default function Checkout() {
     0,
   );
 
+  // With a coupon, the server's figure is what the student pays. A coupon that
+  // covers the whole price means no payment step at all.
+  const couponDiscount = coupon.quote?.discount || 0;
+  const payable = coupon.quote ? coupon.quote.total : total;
+  const isFree = Boolean(coupon.quote) && payable === 0;
+  const couponCode = coupon.quote?.coupon?.code || "";
+
   const update = (field, value) =>
     setForm((current) => ({ ...current, [field]: value }));
 
   const updateTransfer = (field, value) =>
     setTransfer((current) => ({ ...current, [field]: value }));
 
+  const emptyCart = () => {
+    localStorage.setItem(CART_KEY, "[]");
+    setItems([]);
+    window.dispatchEvent(new Event("sage-cart-updated"));
+  };
+
   const handleSubmit = async (event) => {
     event?.preventDefault?.();
-    if (submitting || syncing || authChecking) return;
+    if (submitting || syncing || authChecking || coupon.loading) return;
     if (!isStudent) {
       toast.error("Login as a student to pay, or create a student account.");
       return;
@@ -299,7 +319,7 @@ export default function Checkout() {
 
     // Manual bank transfer: the student says they have paid, and an admin
     // confirms it before enrolling them. Nothing is charged here.
-    if (isBankTransfer) {
+    if (isBankTransfer && !isFree) {
       if (!bankDetails?.configured) {
         toast.error(
           "Bank transfer isn't available right now. Please pay with Paystack.",
@@ -323,6 +343,7 @@ export default function Checkout() {
           transferReference: transfer.transferReference.trim(),
           transferDate: transfer.transferDate,
           note: transfer.note.trim(),
+          couponCode: couponCode || undefined,
           items: items.map((item) => ({
             courseId: item.courseId || item.id || item._id,
           })),
@@ -331,9 +352,8 @@ export default function Checkout() {
         setSubmittedRequest(data.request);
 
         // The courses now wait for confirmation, so empty the cart.
-        localStorage.setItem(CART_KEY, "[]");
-        setItems([]);
-        window.dispatchEvent(new Event("sage-cart-updated"));
+        emptyCart();
+        coupon.remove();
       } catch (error) {
         const status = error?.response?.status;
         toast.error(
@@ -348,7 +368,8 @@ export default function Checkout() {
       return;
     }
 
-    // The backend recalculates every course price; never send/trust the browser total.
+    // The backend recalculates every course price and the coupon discount;
+    // never send/trust the browser total.
     setSubmitting(true);
     try {
       const response = await axiosClient.post("/payments/initialize", {
@@ -356,12 +377,24 @@ export default function Checkout() {
         email: form.email.trim().toLowerCase(),
         phone: form.phone.trim(),
         method,
+        couponCode: couponCode || undefined,
         items: items.map((item) => ({
           courseId: item.courseId || item.id || item._id,
         })),
       });
       const payload = response?.data;
       const payment = payload?.data || payload;
+
+      // A coupon covered the whole price: the server has already enrolled the
+      // student, so go to the normal confirmation page.
+      if (payment?.free) {
+        emptyCart();
+        coupon.remove();
+        const ref = encodeURIComponent(payment.reference);
+        navigate(`/payment/verify?reference=${ref}&trxref=${ref}`);
+        return;
+      }
+
       if (!payment?.authorizationUrl) {
         throw new Error(
           payload?.message ||
@@ -410,6 +443,15 @@ export default function Checkout() {
                 <span className="text-body">Reference</span>
                 <span className="font-bold">{submittedRequest.reference}</span>
               </div>
+              {submittedRequest.couponCode && (
+                <div className="mt-3 flex justify-between gap-4">
+                  <span className="text-body">Coupon</span>
+                  <span className="font-bold text-emerald-700">
+                    {submittedRequest.couponCode} (-
+                    {money(submittedRequest.discount)})
+                  </span>
+                </div>
+              )}
               <div className="mt-3 flex justify-between gap-4">
                 <span className="text-body">Amount</span>
                 <span className="font-bold">
@@ -483,13 +525,20 @@ export default function Checkout() {
     submitting ||
     authChecking ||
     syncError ||
+    coupon.loading ||
     items.some((item) => item.unavailable) ||
-    (isBankTransfer && (bankLoading || !bankDetails?.configured));
+    (isBankTransfer && !isFree && (bankLoading || !bankDetails?.configured));
 
-  const payLabel = isBankTransfer
-    ? "I've made the transfer"
-    : `Pay ${money(total)} · Test Mode`;
-  const busyLabel = isBankTransfer ? "Submitting…" : "Preparing…";
+  const payLabel = isFree
+    ? "Enroll for free"
+    : isBankTransfer
+      ? "I've made the transfer"
+      : `Pay ${money(payable)}`;
+  const busyLabel = isFree
+    ? "Enrolling…"
+    : isBankTransfer
+      ? "Submitting…"
+      : "Preparing…";
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-heading">
@@ -697,97 +746,122 @@ export default function Checkout() {
                   <WalletCards size={19} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold">Choose payment method</h2>
+                  <h2 className="text-lg font-bold">
+                    {isFree ? "Payment" : "Choose payment method"}
+                  </h2>
                   <p className="mt-1 text-sm text-body">
-                    Select how you'd like to pay for your enrollment.
+                    {isFree
+                      ? "Your coupon covers the full price."
+                      : "Select how you'd like to pay for your enrollment."}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-3">
-                {PAYMENT_METHODS.map((item) => {
-                  const Icon = item.icon;
-                  const selected = method === item.id;
-
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setMethod(item.id)}
-                      className={`flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all ${
-                        selected
-                          ? "border-primary bg-primary/5 ring-2 ring-primary/10"
-                          : "border-line hover:border-primary/30 hover:bg-surface-muted"
-                      }`}
-                    >
-                      <div
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                          selected
-                            ? "bg-primary text-white"
-                            : "bg-surface-muted text-heading"
-                        }`}
-                      >
-                        <Icon size={20} />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-bold">{item.title}</p>
-                          {item.id === "card" && (
-                            <span className="rounded-full bg-primary/8 px-2 py-0.5 text-[10px] font-bold text-primary">
-                              Recommended
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-1 text-xs text-body">
-                          {item.description}
-                        </p>
-                      </div>
-
-                      <div
-                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                          selected
-                            ? "border-primary bg-primary text-white"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        {selected && <Check size={12} strokeWidth={3} />}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {isBankTransfer ? (
-                <BankTransferPanel
-                  details={bankDetails}
-                  loading={bankLoading}
-                  error={bankError}
-                  onRetry={() => setBankRetry((count) => count + 1)}
-                  total={total}
-                  disabled={!isStudent}
-                  transfer={transfer}
-                  onChange={updateTransfer}
-                />
-              ) : (
-                <div className="mt-5 rounded-2xl border border-line bg-surface-muted p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold text-body">
-                        Payments secured by
-                      </p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-lg font-extrabold tracking-tight text-[#00c3f7]">
-                          paystack
-                        </span>
-                        <span className="text-xs text-body">
-                          Secure payment gateway
-                        </span>
-                      </div>
-                    </div>
-                    <ShieldCheck className="text-emerald-600" size={27} />
+              {isFree ? (
+                <div className="mt-6 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <CheckCircle2
+                    size={22}
+                    className="mt-0.5 shrink-0 text-emerald-600"
+                  />
+                  <div>
+                    <p className="text-sm font-bold text-emerald-900">
+                      No payment needed
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-emerald-800">
+                      Coupon {couponCode} takes {money(couponDiscount)} off, so
+                      your total is {money(0)}. Click “Enroll for free” to start
+                      learning right away.
+                    </p>
                   </div>
                 </div>
+              ) : (
+                <>
+                  <div className="mt-6 space-y-3">
+                    {PAYMENT_METHODS.map((item) => {
+                      const Icon = item.icon;
+                      const selected = method === item.id;
+
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setMethod(item.id)}
+                          className={`flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all ${
+                            selected
+                              ? "border-primary bg-primary/5 ring-2 ring-primary/10"
+                              : "border-line hover:border-primary/30 hover:bg-surface-muted"
+                          }`}
+                        >
+                          <div
+                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                              selected
+                                ? "bg-primary text-white"
+                                : "bg-surface-muted text-heading"
+                            }`}
+                          >
+                            <Icon size={20} />
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-bold">{item.title}</p>
+                              {item.id === "card" && (
+                                <span className="rounded-full bg-primary/8 px-2 py-0.5 text-[10px] font-bold text-primary">
+                                  Recommended
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 text-xs text-body">
+                              {item.description}
+                            </p>
+                          </div>
+
+                          <div
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                              selected
+                                ? "border-primary bg-primary text-white"
+                                : "border-gray-300"
+                            }`}
+                          >
+                            {selected && <Check size={12} strokeWidth={3} />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {isBankTransfer ? (
+                    <BankTransferPanel
+                      details={bankDetails}
+                      loading={bankLoading}
+                      error={bankError}
+                      onRetry={() => setBankRetry((count) => count + 1)}
+                      total={payable}
+                      disabled={!isStudent}
+                      transfer={transfer}
+                      onChange={updateTransfer}
+                    />
+                  ) : (
+                    <div className="mt-5 rounded-2xl border border-line bg-surface-muted p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold text-body">
+                            Payments secured by
+                          </p>
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="text-lg font-extrabold tracking-tight text-[#00c3f7]">
+                              paystack
+                            </span>
+                            <span className="text-xs text-body">
+                              Secure payment gateway
+                            </span>
+                          </div>
+                        </div>
+                        <ShieldCheck className="text-emerald-600" size={27} />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </section>
 
@@ -803,9 +877,11 @@ export default function Checkout() {
 
             <p className="flex items-center justify-center gap-2 text-center text-xs text-body lg:hidden">
               <LockKeyhole size={13} />
-              {isBankTransfer
-                ? "You're enrolled once we confirm your transfer"
-                : "Secure payment · Your card details are protected"}
+              {isFree
+                ? "No payment needed with your coupon"
+                : isBankTransfer
+                  ? "You're enrolled once we confirm your transfer"
+                  : "Secure payment · Your card details are protected"}
             </p>
           </form>
 
@@ -820,42 +896,58 @@ export default function Checkout() {
               </div>
 
               <div className="max-h-[380px] space-y-4 overflow-y-auto p-5 sm:p-6">
-                {items.map((item) => (
-                  <div key={item.id} className="flex gap-3">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="h-16 w-24 shrink-0 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-primary">
-                        <BookOpen size={22} />
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="line-clamp-2 text-sm font-bold leading-5">
-                        {item.title}
-                      </p>
-                      {item.unavailable && (
-                        <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                          Unavailable
-                        </span>
+                {items.map((item) => {
+                  const line =
+                    Number(item.price || 0) * Number(item.quantity || 1);
+                  const lineQuote = coupon.itemQuote(item.courseId || item.id);
+                  const couponOff = Boolean(
+                    lineQuote && lineQuote.discount > 0,
+                  );
+
+                  return (
+                    <div key={item.id} className="flex gap-3">
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className="h-16 w-24 shrink-0 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-primary">
+                          <BookOpen size={22} />
+                        </div>
                       )}
-                      <p className="mt-1 text-xs text-body">
-                        Qty: {item.quantity || 1}
-                      </p>
-                      <p className="mt-1 text-sm font-bold text-primary">
-                        {money(
-                          Number(item.price || 0) * Number(item.quantity || 1),
+                      <div className="min-w-0">
+                        <p className="line-clamp-2 text-sm font-bold leading-5">
+                          {item.title}
+                        </p>
+                        {item.unavailable && (
+                          <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                            Unavailable
+                          </span>
                         )}
-                      </p>
+                        <p className="mt-1 text-xs text-body">
+                          Qty: {item.quantity || 1}
+                        </p>
+                        <p className="mt-1 flex flex-wrap items-baseline gap-x-2 text-sm font-bold text-primary">
+                          {money(couponOff ? lineQuote.finalPrice : line)}
+                          {couponOff && (
+                            <span className="text-xs font-normal text-body line-through">
+                              {money(line)}
+                            </span>
+                          )}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="border-t border-line p-5 sm:p-6">
+                <CouponBox coupon={coupon} />
+
+                <div className="my-5 border-t border-line" />
+
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between gap-4 text-body">
                     <span>Subtotal</span>
@@ -863,6 +955,17 @@ export default function Checkout() {
                       {money(total)}
                     </span>
                   </div>
+                  {coupon.quote && (
+                    <div className="flex justify-between gap-4 text-emerald-700">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <Tag size={14} className="shrink-0" />
+                        <span className="truncate">Coupon ({couponCode})</span>
+                      </span>
+                      <span className="font-semibold">
+                        -{money(couponDiscount)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between gap-4 text-body">
                     <span>Processing</span>
                     <span className="font-semibold text-emerald-700">
@@ -876,7 +979,9 @@ export default function Checkout() {
                 <div className="flex items-end justify-between gap-4">
                   <div>
                     <p className="text-xs text-body">Total to pay</p>
-                    <p className="mt-1 text-2xl font-bold">{money(total)}</p>
+                    <p className="mt-1 text-2xl font-bold">
+                      {coupon.loading ? "…" : money(payable)}
+                    </p>
                   </div>
                   <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
                     Secure
@@ -900,9 +1005,11 @@ export default function Checkout() {
                       size={16}
                     />
                     <span>
-                      {isBankTransfer
-                        ? "Bank transfer · confirmed by our team"
-                        : "Paystack secure checkout"}
+                      {isFree
+                        ? "Covered in full by your coupon"
+                        : isBankTransfer
+                          ? "Bank transfer · confirmed by our team"
+                          : "Paystack secure checkout"}
                     </span>
                   </div>
                   <div className="flex gap-2">

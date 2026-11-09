@@ -9,6 +9,7 @@ import rateLimit from "express-rate-limit";
 import connectDB from "./config/db.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 import instructorApplicationRoutes from "./routes/instructorApplicationRoutes.js";
+
 import adminStudentRoutes from "./routes/adminStudentRoutes.js";
 import adminInstructorRoutes from "./routes/adminInstructorRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -38,6 +39,8 @@ import contactRoutes from "./routes/contactRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import assistantRoutes from "./routes/assistantRoutes.js";
+import couponRoutes from "./routes/couponRoutes.js";
+import adminCouponRoutes from "./routes/adminCouponRoutes.js";
 
 connectDB();
 
@@ -103,6 +106,7 @@ app.use("/api/student", studentRoutes); // next to /api/progress
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/instructor-applications", instructorApplicationRoutes);
 app.use("/api/payments/bank-transfer", bankTransferRoutes);
+app.use("/api/admin/coupons", adminCouponRoutes);
 app.use("/api/admin/bank-transfers", adminBankTransferRoutes); // above your other /api/admin lines
 app.use("/api/admin/enrollments", adminEnrollmentRoutes);
 app.use("/api/admin", adminStudentRoutes);
@@ -128,6 +132,7 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/assistant", assistantRoutes);
+app.use("/api/coupons", couponRoutes);
 
 // --- Error handling (must be last) ---
 app.use(notFound);

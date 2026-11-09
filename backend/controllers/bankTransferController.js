@@ -4,6 +4,10 @@ import mongoose from "mongoose";
 import Course from "../models/Course.js";
 import CourseEnrollment from "../models/CourseEnrollment.js";
 import BankTransferRequest from "../models/bankTransferRequest.js";
+import {
+  priceOrderWithCoupon,
+  CouponError,
+} from "../services/couponService.js";
 
 const ACCESS_STATUSES = ["active", "completed"];
 const MAX_ITEMS = 20;
@@ -106,7 +110,7 @@ export const getBankDetails = asyncHandler(async (req, res) => {
 /* ------------------------------------------------------------------ */
 
 // @desc    Student says they have paid by bank transfer; waits for admin approval
-// @body    { items: [{ courseId }], senderName, transferReference?,
+// @body    { items: [{ courseId }], couponCode?, senderName, transferReference?,
 //            transferDate, note?, phone? }
 // @access  Private (student)
 export const createBankTransferRequest = asyncHandler(async (req, res) => {
@@ -163,8 +167,8 @@ export const createBankTransferRequest = asyncHandler(async (req, res) => {
     );
   }
 
-  const { items, amountNaira } = await loadAndPriceCourses(req.body.items, res);
-  const courseIds = items.map((item) => item.course);
+  const { items: listItems } = await loadAndPriceCourses(req.body.items, res);
+  const courseIds = listItems.map((item) => item.course);
 
   // Don't take a payment claim for a course the student already has.
   const owned = await CourseEnrollment.find({
@@ -180,7 +184,7 @@ export const createBankTransferRequest = asyncHandler(async (req, res) => {
     const ownedIds = new Set(
       owned.map((enrollment) => String(enrollment.course)),
     );
-    const titles = items
+    const titles = listItems
       .filter((item) => ownedIds.has(String(item.course)))
       .map((item) => item.title)
       .join(", ");
@@ -202,7 +206,7 @@ export const createBankTransferRequest = asyncHandler(async (req, res) => {
     const pendingIds = new Set(
       pending.items.map((item) => String(item.course)),
     );
-    const titles = items
+    const titles = listItems
       .filter((item) => pendingIds.has(String(item.course)))
       .map((item) => item.title)
       .join(", ");
@@ -210,6 +214,26 @@ export const createBankTransferRequest = asyncHandler(async (req, res) => {
     res.status(409);
     throw new Error(
       `You already have a bank transfer waiting for confirmation for: ${titles} (reference ${pending.reference}).`,
+    );
+  }
+
+  // Apply the coupon (if any) on the server
+  let pricing;
+  try {
+    pricing = await priceOrderWithCoupon({
+      items: listItems,
+      code: req.body.couponCode,
+      userId: req.user._id,
+    });
+  } catch (err) {
+    if (err instanceof CouponError) res.status(err.statusCode);
+    throw err;
+  }
+
+  if (pricing.amountNaira <= 0) {
+    res.status(400);
+    throw new Error(
+      "Your coupon covers the whole price, so there is nothing to transfer. Complete checkout to enroll for free.",
     );
   }
 
@@ -224,8 +248,11 @@ export const createBankTransferRequest = asyncHandler(async (req, res) => {
     customerName: req.user.name,
     customerEmail: req.user.email,
     customerPhone: phone,
-    items,
-    amountNaira,
+    items: pricing.items,
+    subtotalNaira: pricing.subtotal,
+    discountNaira: pricing.discount,
+    ...(pricing.coupon ? { coupon: pricing.coupon } : {}),
+    amountNaira: pricing.amountNaira,
     senderName,
     transferReference,
     transferDate,
@@ -241,6 +268,8 @@ export const createBankTransferRequest = asyncHandler(async (req, res) => {
       id: String(request._id),
       reference: request.reference,
       amount: request.amountNaira,
+      discount: request.discountNaira || 0,
+      couponCode: request.coupon?.code || "",
       status: request.status,
       createdAt: request.createdAt,
       courses: request.items.map((item) => ({
