@@ -213,15 +213,6 @@ export default function Cart() {
     window.dispatchEvent(new Event("sage-cart-updated"));
   };
 
-  // const changeQuantity = (id, amount) => {
-  //   const next = items.map((item) => {
-  //     if (item.id !== id) return item;
-  //     const quantity = Math.max(1, Number(item.quantity || 1) + amount);
-  //     return { ...item, quantity };
-  //   });
-  //   updateStorage(next);
-  // };
-
   const removeItem = (id) =>
     updateStorage(items.filter((item) => item.id !== id));
 
@@ -416,28 +407,6 @@ export default function Cart() {
                           </div>
 
                           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                            {/* <div className="flex items-center rounded-lg border border-line">
-                              <button
-                                type="button"
-                                onClick={() => changeQuantity(item.id, -1)}
-                                className="p-2.5 text-body hover:text-heading"
-                                aria-label="Decrease quantity"
-                              >
-                                <Minus size={15} />
-                              </button>
-                              <span className="min-w-8 text-center text-sm font-bold">
-                                {item.quantity || 1}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => changeQuantity(item.id, 1)}
-                                className="p-2.5 text-body hover:text-heading"
-                                aria-label="Increase quantity"
-                              >
-                                <Plus size={15} />
-                              </button>
-                            </div> */}
-
                             <div>
                               <p className="text-lg font-bold text-heading">
                                 {money(

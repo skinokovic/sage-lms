@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import mongoose from "mongoose";
-import Course from "../models/Course.js";
+import Course from "../models/Course.js"; // Adjust this import if your existing Course model has a different path/name.
 import PaymentOrder from "../models/PaymentOrder.js";
 import CourseEnrollment from "../models/CourseEnrollment.js";
 import {

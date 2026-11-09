@@ -533,7 +533,7 @@ export default function Checkout() {
     ? "Enroll for free"
     : isBankTransfer
       ? "I've made the transfer"
-      : `Pay ${money(payable)}`;
+      : `Pay ${money(payable)} · Test Mode`;
   const busyLabel = isFree
     ? "Enrolling…"
     : isBankTransfer
