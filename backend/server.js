@@ -106,6 +106,8 @@ app.use("/api/student", studentRoutes); // next to /api/progress
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/instructor-applications", instructorApplicationRoutes);
 app.use("/api/payments/bank-transfer", bankTransferRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/coupons", couponRoutes);
 app.use("/api/admin/coupons", adminCouponRoutes);
 app.use("/api/admin/bank-transfers", adminBankTransferRoutes); // above your other /api/admin lines
 app.use("/api/admin/enrollments", adminEnrollmentRoutes);
@@ -116,7 +118,7 @@ app.use("/api/admin", adminAssignmentRoutes);
 app.use("/api/admin", adminAnalyticsRoutes);
 app.use("/api/admin", adminDashboardRoutes);
 app.use("/api/instructor/students", instructorStudentRoutes);
-app.use("/api/payments", paymentRoutes);
+
 app.use("/api/instructor/signature", instructorSignatureRoutes);
 
 // with the other routes
@@ -132,7 +134,6 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/assistant", assistantRoutes);
-app.use("/api/coupons", couponRoutes);
 
 // --- Error handling (must be last) ---
 app.use(notFound);
