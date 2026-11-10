@@ -51,6 +51,8 @@ const Instructors = () => {
     dispatch(fetchInstructors());
   }, [dispatch]);
 
+  console.log("INSTRUCTOR", instructors);
+
   // =========================================================
   // SHOW API ERROR
   // =========================================================
