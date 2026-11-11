@@ -91,6 +91,50 @@ const login = asyncHandler(async (req, res) => {
   });
 });
 
+const updateMyProfile = asyncHandler(async (req, res) => {
+  const { name, phone, location } = req.body;
+
+  if (typeof name !== "string" || !name.trim()) {
+    res.status(400);
+    throw new Error("Name is required.");
+  }
+
+  req.user.name = name.trim();
+
+  if (typeof phone === "string") {
+    req.user.phone = phone.trim();
+  }
+
+  if (typeof location === "string") {
+    req.user.location = location.trim();
+  }
+
+  await req.user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully.",
+    user: req.user.toSafeObject(),
+  });
+});
+
+const updateMyAvatar = asyncHandler(async (req, res) => {
+  if (!req.file || !req.file.path) {
+    res.status(400);
+    throw new Error("Please select a profile photo.");
+  }
+
+  req.user.avatarUrl = req.file.path;
+
+  await req.user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Profile photo updated successfully.",
+    user: req.user.toSafeObject(),
+  });
+});
+
 // @desc    Issue a new access token using a valid refresh token
 // @route   POST /api/auth/refresh
 // @access  Public (requires valid refresh token in body)
@@ -190,39 +234,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   res.json(genericResponse);
 });
-
-// @desc    Reset password using a valid reset token
-// @route   POST /api/auth/reset-password
-// @access  Public
-// const resetPassword = asyncHandler(async (req, res) => {
-//   const { token, password } = req.body;
-
-//   if (!token || !password) {
-//     res.status(400);
-//     throw new Error("Token and new password are required");
-//   }
-
-//   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-
-//   const user = await User.findOne({
-//     resetToken: hashedToken,
-//     resetTokenExpiry: { $gt: Date.now() },
-//   }).select("+resetToken +resetTokenExpiry");
-
-//   if (!user) {
-//     res.status(400);
-//     throw new Error("Reset token is invalid or has expired");
-//   }
-
-//   const salt = await bcrypt.genSalt(10);
-//   user.passwordHash = await bcrypt.hash(password, salt);
-//   user.resetToken = undefined;
-//   user.resetTokenExpiry = undefined;
-//   user.refreshTokenHash = undefined; // force re-login on all devices
-//   await user.save();
-
-//   res.json({ success: true, message: "Password has been reset successfully" });
-// });
 
 // @desc    Reset password using a valid reset token
 // @route   POST /api/auth/reset-password
@@ -566,4 +577,6 @@ export {
   googleLogin,
   facebookLogin,
   changePassword,
+  updateMyProfile,
+  updateMyAvatar,
 };

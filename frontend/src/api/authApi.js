@@ -28,4 +28,13 @@ export const authApi = {
 
   changePassword: (payload) =>
     axiosClient.patch("/auth/change-password", payload),
+
+  updateMyProfile: (payload) => axiosClient.put("/auth/me", payload),
+
+  uploadMyAvatar: (formData) =>
+    axiosClient.post("/auth/me/avatar", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }),
 };

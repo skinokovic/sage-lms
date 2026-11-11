@@ -51,6 +51,8 @@ userSchema.methods.toSafeObject = function () {
     name: this.name,
     email: this.email,
     role: this.role,
+    phone: this.phone,
+    location: this.location,
     avatarUrl: this.avatarUrl,
     mustChangePassword: this.mustChangePassword,
     createdAt: this.createdAt,

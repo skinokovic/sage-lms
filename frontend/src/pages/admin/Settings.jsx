@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   UserPlus,
 } from "lucide-react";
-
+import AdminProfile from "../../components/admin/AdminProfile";
+import { UserRound } from "lucide-react";
 import { settingsApi } from "../../api/settingsApi";
 
 const defaultSettings = {
@@ -252,6 +253,12 @@ const Settings = () => {
       description: "Language and region",
       icon: Globe,
     },
+
+    {
+      id: "profile",
+      label: "Admin Profile",
+      icon: UserRound,
+    },
   ];
 
   // ---------------------------------------------------------
@@ -345,7 +352,7 @@ const Settings = () => {
           type="button"
           onClick={() => onChange(!checked)}
           aria-pressed={checked}
-          className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
+          className={`relative mt-0.5 h-6 w-11 shrink-0 cursor-pointer rounded-full transition ${
             checked ? "bg-primary" : "bg-gray-300"
           }`}
         >
@@ -752,9 +759,15 @@ const Settings = () => {
       case "localization":
         return <LocalizationSettings />;
 
+      case "profile":
+        return <AdminProfile />;
+
       case "general":
-      default:
         return <GeneralSettings />;
+
+      case "profile":
+      default:
+        return <AdminProfile />;
     }
   };
 

@@ -68,29 +68,6 @@ const getPublishedCourses = asyncHandler(async (req, res) => {
 // @desc    Get one published course for public course details
 // @route   GET /api/courses/public/:id
 // @access  Public
-// const getPublishedCourseById = asyncHandler(async (req, res) => {
-//   const { id } = req.params;
-
-//   if (!mongoose.Types.ObjectId.isValid(id)) {
-//     res.status(404);
-//     throw new Error("Course not found");
-//   }
-
-//   const course = await Course.findOne({
-//     _id: id,
-//     status: "Published",
-//   }).populate("instructor", "name email avatarUrl");
-
-//   if (!course) {
-//     res.status(404);
-//     throw new Error("Published course not found");
-//   }
-
-//   res.json({
-//     success: true,
-//     course,
-//   });
-// });
 
 const getPublishedCourseById = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -112,19 +89,38 @@ const getPublishedCourseById = asyncHandler(async (req, res) => {
 
   const instructorId = course.instructor?._id;
 
-  const [profile, publishedCount] = instructorId
+  const [profile, publishedCount, courseStudents] = instructorId
     ? await Promise.all([
         Instructor.findOne({ user: instructorId })
           .select("specialization bio rating ratingCount")
           .lean(),
+
         Course.countDocuments({
           instructor: instructorId,
           status: "Published",
         }),
+
+        // Count students registered for THIS course.
+        CourseEnrollment.countDocuments({
+          course: course._id,
+          status: { $in: COUNTED_ENROLLMENT_STATUSES },
+        }),
       ])
-    : [null, 0];
+    : [
+        null,
+        0,
+        await CourseEnrollment.countDocuments({
+          course: course._id,
+          status: { $in: COUNTED_ENROLLMENT_STATUSES },
+        }),
+      ];
 
   const data = course.toJSON();
+
+  // Return the live enrollment count instead of relying
+  // on the potentially outdated Course.students field.
+  data.students = courseStudents;
+
   data.instructor = {
     ...(data.instructor || {}),
     title: profile?.specialization || "",
@@ -134,7 +130,10 @@ const getPublishedCourseById = asyncHandler(async (req, res) => {
     courseCount: publishedCount,
   };
 
-  res.json({ success: true, course: data });
+  res.json({
+    success: true,
+    course: data,
+  });
 });
 
 // @desc    Create a course
