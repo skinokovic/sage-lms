@@ -162,34 +162,34 @@ export default function Login() {
     client.requestAccessToken();
   };
 
-  // const handleFacebookLogin = () => {
-  //   if (!window.FB) {
-  //     toast.error(
-  //       "Facebook sign-in isn't ready yet — please try again in a moment.",
-  //     );
-  //     return;
-  //   }
+  const handleFacebookLogin = () => {
+    if (!window.FB) {
+      toast.error(
+        "Facebook sign-in isn't ready yet — please try again in a moment.",
+      );
+      return;
+    }
 
-  //   window.FB.login(
-  //     (response) => {
-  //       if (!response.authResponse) {
-  //         toast.error("Facebook sign-in was cancelled.");
-  //         return;
-  //       }
+    window.FB.login(
+      (response) => {
+        if (!response.authResponse) {
+          toast.error("Facebook sign-in was cancelled.");
+          return;
+        }
 
-  //       dispatch(facebookLogin(response.authResponse.accessToken))
-  //         .unwrap()
-  //         .then(() => {
-  //           toast.success("Login successfully");
-  //           navigate("/dashboard");
-  //         })
-  //         .catch((err) => {
-  //           toast.error(err || "Facebook sign-in failed.");
-  //         });
-  //     },
-  //     { scope: "email,public_profile" },
-  //   );
-  // };
+        dispatch(facebookLogin(response.authResponse.accessToken))
+          .unwrap()
+          .then(() => {
+            toast.success("Login successfully");
+            navigate("/dashboard");
+          })
+          .catch((err) => {
+            toast.error(err || "Facebook sign-in failed.");
+          });
+      },
+      { scope: "email,public_profile" },
+    );
+  };
 
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-blue-50">
@@ -314,15 +314,15 @@ export default function Login() {
                 {/* =================================================
                     SOCIAL LOGIN
                 ================================================= */}
-
+                {/* 
                 <div className="flex justify-center">
                   <div className="w-full max-w-xs [&>button]:w-full">
                     <SocialButton provider="google" onClick={handleGoogleLogin}>
                       Google
                     </SocialButton>
                   </div>
-                </div>
-                {/* <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 ">
+                </div> */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 ">
                   <SocialButton provider="google" onClick={handleGoogleLogin}>
                     Google
                   </SocialButton>
@@ -333,7 +333,7 @@ export default function Login() {
                   >
                     Facebook
                   </SocialButton>
-                </div> */}
+                </div>
 
                 {/* Create account */}
                 <p className="pt-2 text-center text-sm text-gray-500">
